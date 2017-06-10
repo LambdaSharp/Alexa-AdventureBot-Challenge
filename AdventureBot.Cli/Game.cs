@@ -20,7 +20,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 using System;
@@ -34,34 +33,15 @@ namespace AdventureBot {
     public class Game {
 
         //--- Fields ---
-        public readonly Dictionary<string, GamePlace> Places = new Dictionary<string, GamePlace>();
-
-        public readonly GamePlayer Player;
+        public readonly Dictionary<string, GamePlace> Places;
 
         //--- Constructors ---
-        public Game(string source) {
-            var jsonGame = JsonConvert.DeserializeObject<JObject>(source);
-            foreach(var jsonPlace in ((JObject)jsonGame["places"]).Properties()) {
-                var id = jsonPlace.Name;
-                var description = (string)jsonPlace.Value["description"];
-                var choices = new Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>>();
-                foreach(var jsonChoice in ((JObject)jsonPlace.Value["choices"]).Properties()) {
-                    Enum.TryParse((string)jsonChoice.Name, true, out GameCommandType command);
-                    var actions = ((JArray)jsonChoice.Value).Select(item => {
-                        var property = ((JObject)item).Properties().First();
-                        Enum.TryParse(property.Name, true, out GameActionType action);
-                        return new KeyValuePair<GameActionType, string>(action, (string)property.Value);
-                    }).ToArray();
-                    choices[command] = actions;
-                }
-                var place = new GamePlace(id, description, choices);
-                Places[place.Id] = place;
-            }
-            Player = new GamePlayer(Places["start"]);
+        public Game(Dictionary<string, GamePlace> places) {
+            Places = places;
         }
 
         //--- Methods ---
-        public IEnumerable<AGameResponse> Do(GameCommandType command) {
+        public IEnumerable<AGameResponse> Do(GamePlayer player, GameCommandType command) {
             var result = new List<AGameResponse>();
             var optional = false;
             switch(command) {
@@ -71,14 +51,14 @@ namespace AdventureBot {
                 optional = true;
                 break;
             }
-            if(Player.Place.Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
+            if(player.Place.Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
                 foreach(var action in choice) {
                     switch(action.Key) {
                     case GameActionType.Goto:
-                        if(!Places.TryGetValue(action.Value, out Player.Place)) {
+                        if(!Places.TryGetValue(action.Value, out player.Place)) {
                             throw new Exception($"cannot find place: '{action.Value}'");
                         }
-                        result.Add(new GameResponseSay(Player.Place.Description));
+                        result.Add(new GameResponseSay(player.Place.Description));
                         break;
                     case GameActionType.Say:
                         result.Add(new GameResponseSay(action.Value));
@@ -96,8 +76,8 @@ namespace AdventureBot {
             }
             switch(command) {
             case GameCommandType.Restart:
-                Player.Place = Places["start"];
-                result.Add(new GameResponseSay(Player.Place.Description));
+                player.Place = Places["start"];
+                result.Add(new GameResponseSay(player.Place.Description));
                 break;
             case GameCommandType.Quit:
                 result.Add(new GameResponseBye());

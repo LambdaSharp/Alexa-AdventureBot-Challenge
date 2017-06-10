@@ -20,7 +20,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 using System;
@@ -47,9 +46,10 @@ namespace AventureBot.Cli {
 
             // initialize the game from the adventure file
             Game game;
+            GamePlayer player;
             try {
-                var source = File.ReadAllText(args[0]);
-                game = new Game(source);
+                game = GameLoader.LoadFrom(args[0]);
+                player = new GamePlayer(game.Places["start"]);
             } catch(Exception e) {
                 Console.WriteLine($"ERROR: unable to load file");
                 Console.WriteLine(e);
@@ -58,7 +58,7 @@ namespace AventureBot.Cli {
             Console.Clear();
 
             //
-            var responses = game.Do(GameCommandType.Restart);
+            var responses = game.Do(player, GameCommandType.Restart);
             try {
                 while(true) {
                     if(PlayResponses(responses)) {
@@ -74,7 +74,7 @@ namespace AventureBot.Cli {
                     }
 
                     // process user input
-                    responses = game.Do(command);
+                    responses = game.Do(player, command);
                 }
             } catch(Exception e) {
                 Console.Error.WriteLine(e);

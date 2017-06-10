@@ -1,0 +1,22 @@
+{
+    "places": {
+        "start": {
+            "description": "Welcome to the adventure!",
+            "choices": {
+                "option1": [
+                    { "goto": "room2" }
+                ]
+            }
+        },
+        "room2": {
+            "description": "You won!",
+            "choices": {
+                "restart": [
+                    { "say": "You feel like the world is beginning to spin around you." },
+                    { "delay": "1.0" },
+                    { "say": "And then it's gone!" }
+                ]
+            }
+        }
+    }
+}

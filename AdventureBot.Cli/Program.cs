@@ -50,6 +50,9 @@ namespace AventureBot.Cli {
             try {
                 game = GameLoader.LoadFrom(args[0]);
                 player = new GamePlayer(game.Places["start"]);
+            } catch(GameLoaderException e) {
+                Console.WriteLine($"ERROR: {e.Message}");
+                return;
             } catch(Exception e) {
                 Console.WriteLine($"ERROR: unable to load file");
                 Console.WriteLine(e);
@@ -57,7 +60,7 @@ namespace AventureBot.Cli {
             }
             Console.Clear();
 
-            //
+            // start the game loop
             var responses = game.Do(player, GameCommandType.Restart);
             try {
                 while(true) {
@@ -82,8 +85,9 @@ namespace AventureBot.Cli {
         }
 
         private static bool PlayResponses(IEnumerable<AGameResponse> responses) {
-            var random = new Random();
             var quit = false;
+
+            // process each response
             foreach(var response in responses) {
                 switch(response) {
                 case GameResponseSay say:
@@ -100,15 +104,24 @@ namespace AventureBot.Cli {
                     break;
                 case GameResponseBye _:
                     quit = true;
+                    TypeLine("Good bye.");
+                    break;
+                case null:
+                    Console.WriteLine($"ERROR: null response");
                     break;
                 default:
-                    Console.WriteLine($"unknown response: {response}");
+                    Console.WriteLine($"ERROR: unknown response: {response.GetType().Name}");
                     break;
                 }
             }
+
+            // return boolean indicating if one of the response was a good-bye message
             return quit;
 
             void TypeLine(string text) {
+
+                // write each character with a random delay to give the text output a typewriter feel
+                var random = new Random();
                 foreach(var c in text) {
                     System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
                     Console.Write(c);

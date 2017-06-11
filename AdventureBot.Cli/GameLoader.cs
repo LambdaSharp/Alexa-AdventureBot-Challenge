@@ -36,6 +36,7 @@ namespace AdventureBot {
         //--- Constructors ---
         public GameLoaderException(string message) : base(message) { }
     }
+
     public static class GameLoader {
 
         //--- Class Methods ---
@@ -49,7 +50,7 @@ namespace AdventureBot {
                 var id = jsonPlace.Name;
                 var description = GetString(jsonPlace.Value, "description");
 
-                // parse player choices object
+                // parse player choices
                 var choices = new Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>>();
                 foreach(var jsonChoice in GetObject(jsonPlace.Value, "choices")?.Properties() ?? Enumerable.Empty<JProperty>()) {
 
@@ -58,12 +59,18 @@ namespace AdventureBot {
                     if(!Enum.TryParse(choice, true, out GameCommandType command)) {
                         throw new GameLoaderException($"Illegal value for choice ({choice}) at {jsonChoice.Path}.");
                     }
-                    var actions = ((JArray)jsonChoice.Value).Select(item => {
-                        var property = ((JObject)item).Properties().First();
-                        Enum.TryParse(property.Name, true, out GameActionType action);
-                        return new KeyValuePair<GameActionType, string>(action, (string)property.Value);
-                    }).ToArray();
-                    choices[command] = actions;
+                    if(jsonChoice.Value is JArray array) {
+                        var actions = array.Select(item => {
+                            var property = ((JObject)item).Properties().First();
+                            if(!Enum.TryParse(property.Name, true, out GameActionType action)) {
+                                throw new GameLoaderException($"Illegal key for action ({property.Name}) at {property.Path}.");
+                            }
+                            return new KeyValuePair<GameActionType, string>(action, (string)property.Value);
+                        }).ToArray();
+                        choices[command] = actions;
+                    } else {
+                       throw new GameLoaderException($"Expectd object at {jsonChoice.Value.Path} but found {jsonChoice.Value?.Type.ToString() ?? "null"} instead.");
+                    }
                 }
                 var place = new GamePlace(id, description, choices);
                 places[place.Id] = place;

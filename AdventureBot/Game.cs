@@ -30,6 +30,12 @@ using Newtonsoft.Json.Linq;
 
 namespace AdventureBot {
 
+    public class GameException : Exception {
+
+        //--- Constructors  ---
+        public GameException(string message) : base(message) { }
+    }
+
     public class Game {
 
         //--- Fields ---
@@ -43,20 +49,25 @@ namespace AdventureBot {
         //--- Methods ---
         public IEnumerable<AGameResponse> Do(GamePlayer player, GameCommandType command) {
             var result = new List<AGameResponse>();
+
+            // some commands are optional and don't require to be defined for a place
             var optional = false;
             switch(command) {
-            case GameCommandType.Restart:
             case GameCommandType.Help:
+            case GameCommandType.Hint:
+            case GameCommandType.Restart:
             case GameCommandType.Quit:
                 optional = true;
                 break;
             }
+
+            // check if the place has associated actions for the choice
             if(player.Place.Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
                 foreach(var action in choice) {
                     switch(action.Key) {
                     case GameActionType.Goto:
                         if(!Places.TryGetValue(action.Value, out player.Place)) {
-                            throw new Exception($"cannot find place: '{action.Value}'");
+                            throw new GameException($"cannot find place: '{action.Value}'");
                         }
                         result.Add(new GameResponseSay(player.Place.Description));
                         break;
@@ -64,7 +75,10 @@ namespace AdventureBot {
                         result.Add(new GameResponseSay(action.Value));
                         break;
                     case GameActionType.Delay:
-                        result.Add(new GameResponseDelay(TimeSpan.FromSeconds(double.Parse(action.Value))));
+                        if(!double.TryParse(action.Value, out double delayValue)) {
+                            throw new GameException($"delay must be a number: '{action.Value}'");
+                        }
+                        result.Add(new GameResponseDelay(TimeSpan.FromSeconds(delayValue)));
                         break;
                     case GameActionType.Play:
                         result.Add(new GameResponsePlay(action.Value));
@@ -75,6 +89,14 @@ namespace AdventureBot {
                 result.Add(new GameResponseNotUnderstood());
             }
             switch(command) {
+            case GameCommandType.Help:
+
+                // TODO: implement the help response
+                throw new NotImplementedException("help is missing");
+            case GameCommandType.Hint:
+
+                // hints are optional; nothing else to do
+                break;
             case GameCommandType.Restart:
                 player.Place = Places["start"];
                 result.Add(new GameResponseSay(player.Place.Description));
@@ -82,10 +104,6 @@ namespace AdventureBot {
             case GameCommandType.Quit:
                 result.Add(new GameResponseBye());
                 break;
-            case GameCommandType.Help:
-
-                // TODO: implement the help response
-                throw new NotImplementedException("help is missing");
             }
             return result;
         }

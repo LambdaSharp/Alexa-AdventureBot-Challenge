@@ -39,6 +39,7 @@ namespace AdventureBot {
         Yes = 100,
         No,
         Help = 200,
+        Hint,
         Restart,
         Quit
     }

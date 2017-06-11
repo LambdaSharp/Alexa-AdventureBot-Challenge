@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureBot.Alexa", "Adven
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureBot.Cli", "AdventureBot.Cli\AdventureBot.Cli.csproj", "{8BB81723-DA53-4C82-AA12-81B5BBD8C637}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureBot", "AdventureBot\AdventureBot.csproj", "{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,17 @@ Global
 		{8BB81723-DA53-4C82-AA12-81B5BBD8C637}.Release|x64.Build.0 = Release|x64
 		{8BB81723-DA53-4C82-AA12-81B5BBD8C637}.Release|x86.ActiveCfg = Release|x86
 		{8BB81723-DA53-4C82-AA12-81B5BBD8C637}.Release|x86.Build.0 = Release|x86
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Debug|x64.ActiveCfg = Debug|x64
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Debug|x64.Build.0 = Debug|x64
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Debug|x86.ActiveCfg = Debug|x86
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Debug|x86.Build.0 = Debug|x86
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Release|x64.ActiveCfg = Release|x64
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Release|x64.Build.0 = Release|x64
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Release|x86.ActiveCfg = Release|x86
+		{352F8C8D-264F-4C7A-BC00-9F5EF15D8D2E}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 EndGlobal

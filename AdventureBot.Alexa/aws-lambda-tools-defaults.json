@@ -5,12 +5,14 @@
     "dotnet lambda help",
     "All the command line options for the Lambda command can be specified in this file."
   ],
-  "profile": "",
-  "region": "",
+  "profile": "default",
+  "region": "us-east-1",
   "configuration": "Release",
   "framework": "netcoreapp1.0",
   "function-runtime": "dotnetcore1.0",
   "function-memory-size": 256,
   "function-timeout": 30,
-  "function-handler": "AdventureBot.Alexa::AdventureBot.Alexa.Function::FunctionHandler"
+  "function-name": "LambdaSharp-AdventureBotAlexa",
+  "function-handler": "AdventureBot.Alexa::AdventureBot.Alexa.Function::FunctionHandler",
+  "function-role": "LambdaSharp-AdventureBotAlexa"
 }

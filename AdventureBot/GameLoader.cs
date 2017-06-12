@@ -49,6 +49,7 @@ namespace AdventureBot {
                 // get id and description for place
                 var id = jsonPlace.Name;
                 var description = GetString(jsonPlace.Value, "description");
+                var instructions = GetString(jsonPlace.Value, "instructions");
 
                 // parse player choices
                 var choices = new Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>>();
@@ -72,7 +73,7 @@ namespace AdventureBot {
                        throw new GameLoaderException($"Expectd object at {jsonChoice.Value.Path} but found {jsonChoice.Value?.Type.ToString() ?? "null"} instead.");
                     }
                 }
-                var place = new GamePlace(id, description, choices);
+                var place = new GamePlace(id, description, instructions, choices);
                 places[place.Id] = place;
             }
             return new Game(places);

@@ -29,6 +29,7 @@ using System.Linq;
 using AdventureBot;
 
 namespace AventureBot.Cli {
+
     public class Program {
 
         //--- Class Methods ---
@@ -118,7 +119,7 @@ namespace AventureBot.Cli {
             // return boolean indicating if one of the response was a good-bye message
             return quit;
 
-            void TypeLine(string text) {
+            void TypeLine(string text = "") {
 
                 // write each character with a random delay to give the text output a typewriter feel
                 var random = new Random();

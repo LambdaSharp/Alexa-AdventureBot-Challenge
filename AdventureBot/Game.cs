@@ -53,6 +53,7 @@ namespace AdventureBot {
             // some commands are optional and don't require to be defined for a place
             var optional = false;
             switch(command) {
+            case GameCommandType.Describe:
             case GameCommandType.Help:
             case GameCommandType.Hint:
             case GameCommandType.Restart:
@@ -69,7 +70,7 @@ namespace AdventureBot {
                         if(!Places.TryGetValue(action.Value, out player.Place)) {
                             throw new GameException($"cannot find place: '{action.Value}'");
                         }
-                        result.Add(new GameResponseSay(player.Place.Description));
+                        Describe(player.Place);
                         break;
                     case GameActionType.Say:
                         result.Add(new GameResponseSay(action.Value));
@@ -89,23 +90,37 @@ namespace AdventureBot {
                 result.Add(new GameResponseNotUnderstood());
             }
             switch(command) {
+            case GameCommandType.Describe:
+                Describe(player.Place);
+                break;
             case GameCommandType.Help:
-
-                // TODO: implement the help response
-                throw new NotImplementedException("help is missing");
+                result.Add(new GameResponseSay(player.Place.Instructions));
+                break;
             case GameCommandType.Hint:
 
                 // hints are optional; nothing else to do
                 break;
             case GameCommandType.Restart:
                 player.Place = Places["start"];
-                result.Add(new GameResponseSay(player.Place.Description));
+                Describe(player.Place);
                 break;
             case GameCommandType.Quit:
                 result.Add(new GameResponseBye());
                 break;
             }
             return result;
+
+            void Describe(GamePlace place) {
+                if((place.Description != null) && (place.Instructions != null)) {
+                    result.Add(new GameResponseSay(place.Description));
+                    result.Add(new GameResponseDelay(TimeSpan.FromMilliseconds(250)));
+                    result.Add(new GameResponseSay(place.Instructions));
+                } else if(place.Description != null) {
+                    result.Add(new GameResponseSay(place.Description));
+                } else if(place.Instructions != null) {
+                    result.Add(new GameResponseSay(place.Instructions));
+                }
+           }
         }
     }
 }

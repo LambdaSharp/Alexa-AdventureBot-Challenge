@@ -38,7 +38,8 @@ namespace AdventureBot {
         Option9,
         Yes = 100,
         No,
-        Help = 200,
+        Describe = 200,
+        Help,
         Hint,
         Restart,
         Quit
@@ -56,13 +57,15 @@ namespace AdventureBot {
         //--- Fields ---
         public readonly string Id;
         public readonly string Description;
+        public readonly string Instructions;
 
         public readonly Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> Choices;
 
         //--- Constructors ---
-        public GamePlace(string id, string description, Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> choices) {
+        public GamePlace(string id, string description, string instructions, Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> choices) {
             Id = id;
             Description = description;
+            Instructions = instructions;
             Choices = choices;
         }
     }

@@ -22,51 +22,23 @@
  * SOFTWARE.
  */
 
-using System.Collections.Generic;
+namespace AdventureBot.Alexa {
+    public static class AdventureBotIntent {
 
-namespace AdventureBot {
-
-    public enum GameCommandType {
-        OptionOne = 1,
-        OptionTwo,
-        OptionThree,
-        OptionFour,
-        OptionFive,
-        OptionSix,
-        OptionSeven,
-        OptionEight,
-        OptionNine,
-        Yes = 100,
-        No,
-        Describe = 200,
-        Help,
-        Hint,
-        Restart,
-        Quit
-    }
-
-    public enum GameActionType {
-        Goto = 1,
-        Say,
-        Delay,
-        Play
-    }
-
-     public class GamePlace {
-
-        //--- Fields ---
-        public readonly string Id;
-        public readonly string Description;
-        public readonly string Instructions;
-
-        public readonly Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> Choices;
-
-        //--- Constructors ---
-        public GamePlace(string id, string description, string instructions, Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> choices) {
-            Id = id;
-            Description = description;
-            Instructions = instructions;
-            Choices = choices;
-        }
+        //--- Constants ---
+        public const string Option1 = "OptionOne";
+        public const string Option2 = "OptionTwo";
+        public const string Option3 = "OptionThree";
+        public const string Option4 = "OptionFour";
+        public const string Option5 = "OptionFie";
+        public const string Option6 = "OptionSix";
+        public const string Option7 = "OptionSeven";
+        public const string Option8 = "OptionEight";
+        public const string Option9 = "OptionNine";
+        public const string Yes = "Yes";
+        public const string No = "No";
+        public const string Describe = "Describe";
+        public const string Hint = "Hint";
+        public const string Restart = "Restart";
     }
 }

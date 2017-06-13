@@ -42,6 +42,10 @@ namespace AdventureBot {
         //--- Class Methods ---
         public static Game LoadFrom(string filepath) {
             var source = File.ReadAllText(filepath);
+            return Parse(source);
+        }
+
+        public static Game Parse(string source) {
             var jsonGame = JsonConvert.DeserializeObject<JObject>(source);
             var places = new Dictionary<string, GamePlace>();
             foreach(var jsonPlace in GetObject(jsonGame, "places")?.Properties() ?? Enumerable.Empty<JProperty>()) {

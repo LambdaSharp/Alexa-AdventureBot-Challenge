@@ -3,6 +3,13 @@ AdventureBot is an Amazon Alexa Skill for creating your own voice-based adventur
 
 The AdventureBot uses a simple JSON file to define places with available player choices. The starting place is always called `start`.
 
+## Setup
+
+### IAM Role: LambdaSharp-AdventureBotAlexa
+* AmazonS3FullAccess
+* CloudWatchLogsFullAccess
+* AmazonSNSFullAccess
+
 ## Commands
 * 1 through 9: are player choices
 * yes/no

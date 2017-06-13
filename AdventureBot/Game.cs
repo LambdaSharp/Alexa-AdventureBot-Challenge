@@ -68,7 +68,7 @@ namespace AdventureBot {
                     switch(action.Key) {
                     case GameActionType.Goto:
                         if(!Places.TryGetValue(action.Value, out player.Place)) {
-                            throw new GameException($"cannot find place: '{action.Value}'");
+                            throw new GameException($"Cannot find place: '{action.Value}'");
                         }
                         Describe(player.Place);
                         break;
@@ -77,7 +77,7 @@ namespace AdventureBot {
                         break;
                     case GameActionType.Delay:
                         if(!double.TryParse(action.Value, out double delayValue)) {
-                            throw new GameException($"delay must be a number: '{action.Value}'");
+                            throw new GameException($"Delay must be a number: '{action.Value}'");
                         }
                         result.Add(new GameResponseDelay(TimeSpan.FromSeconds(delayValue)));
                         break;

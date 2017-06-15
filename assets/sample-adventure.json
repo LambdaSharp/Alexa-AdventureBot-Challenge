@@ -33,23 +33,23 @@
         },
         "end-room-good": {
             "description": "You found the exit! Congratulations!",
-            "instructions": "Say \"restart\" to start over or \"quit\" to leave.",
+            "instructions": "You may restart the adventure or leave.",
             "choices": {
                 "restart": [
                     { "say": "You feel like the world is beginning to spin around you." },
-                    { "delay": "1.0" },
+                    { "delay": "0.5" },
                     { "say": "And then it's gone!" }
                 ]
             }
         },
         "end-room-bad": {
             "description": "Before you know it, the air turns toxic and you suffocate. You've died.",
-            "instructions": "Say \"restart\" to start over or \"quit\" to leave.",
+            "instructions": "You may restart the adventure or leave.",
             "choices": {
                 "restart": [
                     { "say": "It feels like a hand is reaching out from the light and pulls you back." },
-                    { "delay": "1.0" },
-                    { "say": "And then you are back!" }
+                    { "delay": "0.5" },
+                    { "say": "And then..." }
                 ]
             }
         }

@@ -1,258 +1,91 @@
-# June17-AdventureBot
-AdventureBot is an Amazon Alexa Skill for creating your own voice-based adventures.
+# λ# AdventureBot - June 2017 Hackathon
+AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skills-kit) for powering voice-based adventures on Alexa-enabled devices. AdventureBot includes a game library, an AWS Lambda function, a command line utility, and an Alexa Skill definitionn to get you going as quickly as possible.
 
-The AdventureBot uses a simple JSON file to define places with available player choices. The starting place is always called `start`.
+## Pre-requesites
+The following tools and accounts are required to complete these instructions.
 
-## Setup
+* [Install .NET Core 1.x](https://www.microsoft.com/net/core)
+* [Install AWS CLI](https://aws.amazon.com/cli/)
+* [Sign-up for an AWS account](https://aws.amazon.com/)
+* [Sign-up for an Amazon developer account](https://developer.amazon.com/)
 
-### 1) Create IAM role for LambdaSharp-AdventureBotAlexa
-You will need an IAM role to give permission to the lambda function to access CloudWatchLogs, S3, and SNS. You can create the `LambdaSharp-AdventureBotAlexa` role via the [AWS Console](https://console.aws.amazon.com/iam/home).
+## Running the AdventureBot command line app
+1. Restore solution packages: `dotnet restore`
+2. Change folder the command line project: `cd AdventureBot.Cli`
+3. Run app with a sample file: `dotnet run ../assets/sample-adventure.json`
 
-If you have the [AWS CLI](https://aws.amazon.com/cli/) tool installed, you can also create the role using the following statements run from this folder.
+## Setting up the Alexa Skill
+
+### 1) `lambdasharp` AWS Profile
+The project uses by default the `lambdasharp` profile. Follow these steps to setup a new profile if need be.
+
+1. Create a `lambdasharp profile`: `aws configure --profile lambdasharp`
+2. Configure the profile with the AWS credentials you want to use
+3. **NOTE**: AWS Lambda function for Alexa Skills must be hosted in `us-east-1`
+
+### 2) Create IAM role for the AdventureBot AWS Lambda function
+The AWS Lambda function requires an IAM role to access CloudWatchLogs, S3, SNS, and DynamoDB. You can create the `LambdaSharp-AdventureBotAlexa` role via the [AWS Console](https://console.aws.amazon.com/iam/home) or use the executing [AWS CLI](https://aws.amazon.com/cli/) commands.
 ```
-aws iam create-role --role-name LambdaSharp-AdventureBotAlexa --assume-role-policy-document file://lambda-role-policy.json
-aws iam attach-role-policy --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
-aws iam attach-role-policy --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-aws iam attach-role-policy --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonSNSFullAccess
-aws iam attach-role-policy --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-```
-
-### 2) Create Alexa Skill (using Alexa Skill Builer)
-```
-{
-  "intents": [
-    {
-      "name": "AMAZON.CancelIntent",
-      "samples": []
-    },
-    {
-      "name": "AMAZON.HelpIntent",
-      "samples": []
-    },
-    {
-      "name": "AMAZON.StopIntent",
-      "samples": [
-        "quit",
-        "leave",
-        "exit"
-      ]
-    },
-    {
-      "name": "Describe",
-      "samples": [
-        "describe"
-      ],
-      "slots": []
-    },
-    {
-      "name": "Hint",
-      "samples": [
-        "hint"
-      ],
-      "slots": []
-    },
-    {
-      "name": "No",
-      "samples": [
-        "no"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionEight",
-      "samples": [
-        "eight",
-        "option eight"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionFive",
-      "samples": [
-        "five",
-        "option five"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionFour",
-      "samples": [
-        "four",
-        "option four"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionNine",
-      "samples": [
-        "nine",
-        "option nine"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionOne",
-      "samples": [
-        "one",
-        "option one"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionSeven",
-      "samples": [
-        "seven",
-        "option seven"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionSix",
-      "samples": [
-        "six",
-        "option six"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionThree",
-      "samples": [
-        "three",
-        "option three"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionTwo",
-      "samples": [
-        "two",
-        "option two"
-      ],
-      "slots": []
-    },
-    {
-      "name": "Restart",
-      "samples": [
-        "restart",
-        "start over"
-      ],
-      "slots": []
-    },
-    {
-      "name": "Yes",
-      "samples": [
-        "yes"
-      ],
-      "slots": []
-    }
-  ],
-  "prompts": [
-    {
-      "id": "Confirm.Intent-Restart",
-      "promptVersion": "1.0",
-      "definitionVersion": "1.0",
-      "variations": [
-        {
-          "type": "PlainText",
-          "value": "Are you sure you want to restart?"
-        }
-      ]
-    }
-  ],
-  "dialog": {
-    "version": "1.0",
-    "intents": [
-      {
-        "name": "Describe",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "Hint",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "No",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionEight",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionFive",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionFour",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionNine",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionOne",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionSeven",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionSix",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionThree",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionTwo",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "Restart",
-        "confirmationRequired": true,
-        "prompts": {
-          "confirm": "Confirm.Intent-Restart"
-        },
-        "slots": []
-      },
-      {
-        "name": "Yes",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      }
-    ]
-  }
-}
+aws iam create-role --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --assume-role-policy-document file://assets/lambda-role-policy.json
+aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonSNSFullAccess
+aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
 ```
 
+### 3) Upload AdventureBot JSON file
+The AdventureBot AWS Lambda function reads the adventure definition from a JSON file that must be uploaded to S3. Follow these steps to create a new bucket and upload a sample adventure file.
+
+1. Create an S3 bucket (e.g. `lambdasharp`)
+2. Create an `AdventureBot` folder
+3. Upload `assets/sample-adventure.json` file
+
+### 4) Publish the AdventureBot AWS Lambda function
+The AdventureBot AWS Lambda function needs to be compiled and published to AWS `us-east-1`. The default publishing settings are in `aws-lambda-tools-defaults.json` file and assume the `lambdasharp` profile. Once published, the AWS Lambda function needs to be configured to be ready for invocation by the Alexa Skill.
+
+1. Change folder to the lambda function: `cd AdventureBot.Alexa`
+2. Publish the lambda function: `dotnet lambda deploy-function`
+3. [Go to the published lambda function in the console](https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/LambdaSharp-AdventureBotAlexa?tab=code)
+4. Copy the AWS Lambda function ARN for later (e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
+5. Under `Code` > `Environment Variables`
+    1. Add key: `adventure_file`
+    2. Add value pointing to the JSON file (replace with your bucket name and file path): `s3://lambdasharp/AdventureBot/sample-adventure.json`
+    3. Clic `Save`
+6. Under `Triggers`
+    1. Click `Add Trigger`
+    2. Select `Alexa Skills Kit`
+
+### 5) Create AdventureBot Alexa Skill
+The following steps set up the Alexa Skill with an invocation name, a predefiend set of voice commands, and associates it with the AdventureBot AWS Lambda function.
+
+1. [Log into the Amazon Developer Console](https://developer.amazon.com/home.html)
+2. Click on the `ALEXA` tab
+3. Click on Alexa Skill Kit `Get Started`
+4. Click `Add a New Skill`
+5. *Skill Information*
+    1. Under name put: `AdventureBot`
+    2. Under invocation name put: `Adventure Bot`
+    3. Click `Save`
+    4. Clikc `Next`
+6. *Interaction Model*
+    1. Click `Launch Skill Builder`
+    2. Click `Discard` to proceed
+    3. Click `</> Code` in left navigation
+    4. Upload `assets/alexa-skill.json` file
+    5. Click `Apply Changes`
+    6. Click `Build Mode` in the toolbar
+    7. Click `Configuration`
+7. *Configuration*
+    1. Select `AWS Lambda ARN (Amazon Resource Name)`
+    2. Select `North America`
+    3. Paste in the AWS Lambda function ARN (e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
+    4. Click `Next`
+8. **Congratulations!!** Your Alexa Skill is now available on all your registerd Alexa-devices, including the Amazon mobile app. Give it a whirl!
+    * For Alexa devices, say: `Alexa, open Adventure Bot`
+    * For the Amazon mobile app, click the microphone icon, and say: `open Adventure Bot`
+
+
+# TODO TODO TODO TODO TODO TODO
 
 ## Commands
 * 1 through 9: are player choices
@@ -263,6 +96,8 @@ aws iam attach-role-policy --role-name LambdaSharp-AdventureBotAlexa --policy-ar
 * quit
 
 ## Sample File
+The AdventureBot uses a simple JSON file to define places with available player choices. The starting place is always called `start`.
+
 The following is sample adventure file:
 ```
 {

@@ -113,7 +113,6 @@ namespace AdventureBot {
             void Describe(GamePlace place) {
                 if((place.Description != null) && (place.Instructions != null)) {
                     result.Add(new GameResponseSay(place.Description));
-                    result.Add(new GameResponseDelay(TimeSpan.FromMilliseconds(250)));
                     result.Add(new GameResponseSay(place.Instructions));
                 } else if(place.Description != null) {
                     result.Add(new GameResponseSay(place.Description));

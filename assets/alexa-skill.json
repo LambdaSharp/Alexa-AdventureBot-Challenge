@@ -1,0 +1,232 @@
+{
+  "intents": [
+    {
+      "name": "AMAZON.CancelIntent",
+      "samples": []
+    },
+    {
+      "name": "AMAZON.HelpIntent",
+      "samples": []
+    },
+    {
+      "name": "AMAZON.StopIntent",
+      "samples": [
+        "quit",
+        "leave",
+        "exit"
+      ]
+    },
+    {
+      "name": "Describe",
+      "samples": [
+        "describe"
+      ],
+      "slots": []
+    },
+    {
+      "name": "Hint",
+      "samples": [
+        "hint"
+      ],
+      "slots": []
+    },
+    {
+      "name": "No",
+      "samples": [
+        "no"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionEight",
+      "samples": [
+        "eight",
+        "option eight"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionFive",
+      "samples": [
+        "five",
+        "option five"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionFour",
+      "samples": [
+        "four",
+        "option four"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionNine",
+      "samples": [
+        "nine",
+        "option nine"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionOne",
+      "samples": [
+        "one",
+        "option one"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionSeven",
+      "samples": [
+        "seven",
+        "option seven"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionSix",
+      "samples": [
+        "six",
+        "option six"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionThree",
+      "samples": [
+        "three",
+        "option three"
+      ],
+      "slots": []
+    },
+    {
+      "name": "OptionTwo",
+      "samples": [
+        "two",
+        "option two"
+      ],
+      "slots": []
+    },
+    {
+      "name": "Restart",
+      "samples": [
+        "restart",
+        "start over"
+      ],
+      "slots": []
+    },
+    {
+      "name": "Yes",
+      "samples": [
+        "yes"
+      ],
+      "slots": []
+    }
+  ],
+  "prompts": [
+    {
+      "id": "Confirm.Intent-Restart",
+      "promptVersion": "1.0",
+      "definitionVersion": "1.0",
+      "variations": [
+        {
+          "type": "PlainText",
+          "value": "Are you sure you want to restart?"
+        }
+      ]
+    }
+  ],
+  "dialog": {
+    "version": "1.0",
+    "intents": [
+      {
+        "name": "Describe",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "Hint",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "No",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionEight",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionFive",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionFour",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionNine",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionOne",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionSeven",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionSix",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionThree",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "OptionTwo",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      },
+      {
+        "name": "Restart",
+        "confirmationRequired": true,
+        "prompts": {
+          "confirm": "Confirm.Intent-Restart"
+        },
+        "slots": []
+      },
+      {
+        "name": "Yes",
+        "confirmationRequired": false,
+        "prompts": {},
+        "slots": []
+      }
+    ]
+  }
+}

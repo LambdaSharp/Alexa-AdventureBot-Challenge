@@ -1,7 +1,7 @@
 # λ# AdventureBot - June 2017 Hackathon
-AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skills-kit) for powering voice-based adventures on Alexa-enabled devices. AdventureBot includes a game library, an AWS Lambda function, a command line utility, and an Alexa Skill definitionn to get you going as quickly as possible.
+AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skills-kit) for powering voice-based adventures on Alexa-enabled devices. AdventureBot includes a game library, an AWS Lambda function, a command line utility, and an Alexa Skill definition to get you going as quickly as possible.
 
-## Pre-requesites
+## Pre-requisites
 The following tools and accounts are required to complete these instructions.
 
 * [Install .NET Core 1.x](https://www.microsoft.com/net/core)
@@ -25,7 +25,8 @@ The project uses by default the `lambdasharp` profile. Follow these steps to set
 
 ### 2) Create IAM role for the AdventureBot AWS Lambda function
 The AWS Lambda function requires an IAM role to access CloudWatchLogs, S3, SNS, and DynamoDB. You can create the `LambdaSharp-AdventureBotAlexa` role via the [AWS Console](https://console.aws.amazon.com/iam/home) or use the executing [AWS CLI](https://aws.amazon.com/cli/) commands.
-```
+
+```shell
 aws iam create-role --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --assume-role-policy-document file://assets/lambda-role-policy.json
 aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
 aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
@@ -50,13 +51,13 @@ The AdventureBot AWS Lambda function needs to be compiled and published to AWS `
 5. Under `Code` > `Environment Variables`
     1. Add key: `adventure_file`
     2. Add value pointing to the JSON file (replace with your bucket name and file path): `s3://lambdasharp/AdventureBot/sample-adventure.json`
-    3. Clic `Save`
+    3. Click `Save`
 6. Under `Triggers`
     1. Click `Add Trigger`
     2. Select `Alexa Skills Kit`
 
 ### 5) Create AdventureBot Alexa Skill
-The following steps set up the Alexa Skill with an invocation name, a predefiend set of voice commands, and associates it with the AdventureBot AWS Lambda function.
+The following steps set up the Alexa Skill with an invocation name, a predefined set of voice commands, and associates it with the AdventureBot AWS Lambda function.
 
 1. [Log into the Amazon Developer Console](https://developer.amazon.com/home.html)
 2. Click on the `ALEXA` tab
@@ -66,7 +67,7 @@ The following steps set up the Alexa Skill with an invocation name, a predefiend
     1. Under name put: `AdventureBot`
     2. Under invocation name put: `Adventure Bot`
     3. Click `Save`
-    4. Clikc `Next`
+    4. Click `Next`
 6. *Interaction Model*
     1. Click `Launch Skill Builder`
     2. Click `Discard` to proceed
@@ -80,81 +81,85 @@ The following steps set up the Alexa Skill with an invocation name, a predefiend
     2. Select `North America`
     3. Paste in the AWS Lambda function ARN (e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
     4. Click `Next`
-8. **Congratulations!!** Your Alexa Skill is now available on all your registerd Alexa-devices, including the Amazon mobile app. Give it a whirl!
+8. **Congratulations!!** Your Alexa Skill is now available on all your registered Alexa-devices, including the Amazon mobile app. Give it a whirl!
     * For Alexa devices, say: `Alexa, open Adventure Bot`
     * For the Amazon mobile app, click the microphone icon, and say: `open Adventure Bot`
 
+## AdventureBot File Format
+The AdventureBot uses a simple JSON file to define places. Each place has a description and a list of choices that are available to the player.
 
-# TODO TODO TODO TODO TODO TODO
+### Main
+The main object has only one field called `"places"`.
 
-## Commands
-* 1 through 9: are player choices
-* yes/no
-* help
-* hint
-* restart
-* quit
+* `"places"`: Map of place IDs to place objects. This map must contain a place called `"start"`.
 
-## Sample File
-The AdventureBot uses a simple JSON file to define places with available player choices. The starting place is always called `start`.
-
-The following is sample adventure file:
-```
+```json
 {
-    "places": {
-        "start": {
-            "description": "You are in a dark room. The air feels stale. You see a flicker of light to the North.",
-            "instructions": "To go North, say 1. To wait and see what happens, say 2.",
-            "choices": {
-                "1": [
-                    { "say": "You cautiously walk towards the North." },
-                    { "goto": "room2" }
-                ],
-                "2": [
-                    { "goto": "end-room-bad" }
-                ],
-                "hint": [
-                    { "say": "You get the feeling that if you stay here, you will not be for long..." }
-                ]
-            }
-        },
-        "room2": {
-            "description": "You are in dimly lit room. The air feels a bit fresher. There is a breeze coming from the East.",
-            "instructions": "To go back South, say 1. To proceed East, say 2.",
-            "choices": {
-                "1": [
-                    { "goto": "start" }
-                ],
-                "2": [
-                    { "goto": "end-room-good" }
-                ],
-                "hint":[
-                    { "say": "You feel like you're out of immediate danger now." }
-                ]
-            }
-        },
-        "end-room-good": {
-            "description": "You found the exit! Congratulations!",
-            "instructions": "Say \"restart\" to start over or \"quit\" to leave.",
-            "choices": {
-                "restart": [
-                    { "say": "You feel like the world is beginning to spin around you." },
-                    { "delay": "1.0" },
-                    { "say": "And then it's gone!" }
-                ]
-            }
-        },
-        "end-room-bad": {
-            "description": "Before you know it, the air turns toxic and you suffocate. You've died.",
-            "instructions": "Say \"restart\" to start over or \"quit\" to leave.",
-            "choices": {
-                "restart": [
-                    { "say": "It feels like a hand is reaching out from the light and pulls you back." },
-                    { "delay": "1.0" },
-                    { "say": "And then you are back!" }
-                ]
-            }
-        }
-    }
+    "places": { ... }
+}
+```
+
+### Place
+The place object has multiple fields. All of them are required.
+
+* `"description"`: Text describing the place/situation the player is in. This text is automatically read when the player first enters a place and can be repeated with the built-in *describe* command.
+* `"instructions"`: Text describing the actions the player can provide. This text is automatically read when the player first enters a place and can be repeated with the built-in *help* command.
+* `"choices"`: Map of choices to actions the player can make.
+
+```json
+{
+    "description": "You are in a room.",
+    "instructions": "To go North, say 1.",
+    "choices": { ... }
+}
+```
+
+### Choices
+The choice object associates a command with zero or more actions. The field name must be one of the recognized commands:
+* `"1"` through `"9"`
+* `"yes"` and `"no"`
+* `"help"`
+* `"hint"`
+* `"restart"`
+* `"quit"`
+
+```json
+{
+    "yes": [ ... ],
+    "no": [ ... ]
+}
+```
+
+### Actions
+The action object associates an action with an argument. The field name must be one of the recognized actions:
+
+* `"say"`: Says one or more sentences.
+* `"pause"`: Pause the output for a while.
+* `"play"`: Play an MP3 file.
+
+#### Say Action
+The say action converts text into speech.
+
+```json
+{
+    "say": [ "You open the door." ]
+}
+```
+
+#### Pause Action
+The pause action is delays further speech for the specified duration in seconds.
+
+```json
+{
+    "pause": [ 0.5 ]
+}
+```
+
+#### Play Action
+The play action plays back an MP3 file. The URL to the MP3 file must use a https:// link.
+
+```json
+{
+    "play": [ "https://example.org/door-close.mp3" ]
 }
 ```

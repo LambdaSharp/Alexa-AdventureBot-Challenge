@@ -34,8 +34,10 @@ using Alexa.NET;
 using Alexa.NET.Request;
 using Alexa.NET.Request.Type;
 using Alexa.NET.Response;
+using Amazon.DynamoDBv2;
 using Amazon.Lambda.Core;
 using Amazon.S3;
+using Amazon.SimpleNotificationService;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -141,15 +143,27 @@ namespace AdventureBot.Alexa {
 
         //--- Fields ---
         private readonly AmazonS3Client _s3Client;
+        private readonly AmazonSimpleNotificationServiceClient _snsClient;
+        private readonly AmazonDynamoDBClient _dynamoClient;
         private readonly string _adventureFileBucket;
         private readonly string _adventureFilePath;
 
         //--- Constructors ---
         public Function() {
-            _s3Client = new AmazonS3Client();
-            var adventureFileUrl = new Uri(System.Environment.GetEnvironmentVariable("adventure_file"));
+
+            // read function settings
+            var adventureFile = System.Environment.GetEnvironmentVariable("adventure_file");
+            if(string.IsNullOrEmpty(adventureFile)) {
+                throw new ArgumentException("missing S3 url for adventure json file", "adventure_file");
+            }
+            var adventureFileUrl = new Uri(adventureFile);
             _adventureFileBucket = adventureFileUrl.Host;
             _adventureFilePath = adventureFileUrl.AbsolutePath.Trim('/');
+
+            // initialize clients
+            _s3Client = new AmazonS3Client();
+            _snsClient = new AmazonSimpleNotificationServiceClient();
+            _dynamoClient = new AmazonDynamoDBClient();
         }
 
         //--- Methods ---

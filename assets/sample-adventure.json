@@ -37,7 +37,7 @@
             "choices": {
                 "restart": [
                     { "say": "You feel like the world is beginning to spin around you." },
-                    { "delay": "0.5" },
+                    { "pause": 0.5 },
                     { "say": "And then it's gone!" }
                 ]
             }
@@ -48,7 +48,7 @@
             "choices": {
                 "restart": [
                     { "say": "It feels like a hand is reaching out from the light and pulls you back." },
-                    { "delay": "0.5" },
+                    { "pause": 0.5 },
                     { "say": "And then..." }
                 ]
             }

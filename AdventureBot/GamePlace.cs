@@ -48,7 +48,7 @@ namespace AdventureBot {
     public enum GameActionType {
         Goto = 1,
         Say,
-        Delay,
+        Pause,
         Play
     }
 

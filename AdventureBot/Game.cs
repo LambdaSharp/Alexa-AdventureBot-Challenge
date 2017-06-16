@@ -75,7 +75,7 @@ namespace AdventureBot {
                     case GameActionType.Say:
                         result.Add(new GameResponseSay(action.Value));
                         break;
-                    case GameActionType.Delay:
+                    case GameActionType.Pause:
                         if(!double.TryParse(action.Value, out double delayValue)) {
                             throw new GameException($"Delay must be a number: '{action.Value}'");
                         }

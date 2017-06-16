@@ -125,19 +125,6 @@
       "slots": []
     }
   ],
-  "prompts": [
-    {
-      "id": "Confirm.Intent-Restart",
-      "promptVersion": "1.0",
-      "definitionVersion": "1.0",
-      "variations": [
-        {
-          "type": "PlainText",
-          "value": "Are you sure you want to restart?"
-        }
-      ]
-    }
-  ],
   "dialog": {
     "version": "1.0",
     "intents": [
@@ -215,10 +202,8 @@
       },
       {
         "name": "Restart",
-        "confirmationRequired": true,
-        "prompts": {
-          "confirm": "Confirm.Intent-Restart"
-        },
+        "confirmationRequired": false,
+        "prompts": {},
         "slots": []
       },
       {

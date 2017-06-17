@@ -80,8 +80,19 @@ namespace AdventureBot {
                 var place = new GamePlace(id, description, instructions, choices);
                 places[place.Id] = place;
             }
+
+            // ensure there is a start room
+            if(!places.ContainsKey(Game.StartPlaceId)) {
+                places[Game.StartPlaceId] = new GamePlace(
+                    Game.StartPlaceId,
+                    "No start place is defined for this adventure. Please check your adventure file and try again.",
+                    "Please check your adventure file and try again.",
+                    new Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>>()
+                );
+            }
             return new Game(places);
 
+            // helper functions
             JObject GetObject(JToken json, string key) {
                 if(json is JObject objOuter) {
                     var token = objOuter[key];

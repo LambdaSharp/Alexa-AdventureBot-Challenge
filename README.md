@@ -105,7 +105,6 @@ Finally, the Alexa Sill needs to be updated to point to the AdventureBot lambda 
 
 ### LEVEL 4 - ???
 
-
 ## APPENDIX A - AdventureBot File Format
 The AdventureBot uses a simple JSON file to define places. Each place has a description and a list of choices that are available to the player.
 

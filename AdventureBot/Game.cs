@@ -38,6 +38,9 @@ namespace AdventureBot {
 
     public class Game {
 
+        //--- Constants ---
+        public const string StartPlaceId = "start";
+
         //--- Fields ---
         public readonly Dictionary<string, GamePlace> Places;
 
@@ -63,14 +66,16 @@ namespace AdventureBot {
             }
 
             // check if the place has associated actions for the choice
-            if(player.Place.Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
+            GamePlace place = Places[player.PlaceId];
+            if(Places[player.PlaceId].Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
                 foreach(var action in choice) {
                     switch(action.Key) {
                     case GameActionType.Goto:
-                        if(!Places.TryGetValue(action.Value, out player.Place)) {
+                        if(!Places.TryGetValue(action.Value, out place)) {
                             throw new GameException($"Cannot find place: '{action.Value}'");
                         }
-                        Describe(player.Place);
+                        player.PlaceId = place.Id;
+                        DescribePlace(place);
                         break;
                     case GameActionType.Say:
                         result.Add(new GameResponseSay(action.Value));
@@ -91,18 +96,19 @@ namespace AdventureBot {
             }
             switch(command) {
             case GameCommandType.Describe:
-                Describe(player.Place);
+                DescribePlace(place);
                 break;
             case GameCommandType.Help:
-                result.Add(new GameResponseSay(player.Place.Instructions));
+                result.Add(new GameResponseSay(place.Instructions));
                 break;
             case GameCommandType.Hint:
 
                 // hints are optional; nothing else to do
                 break;
             case GameCommandType.Restart:
-                player.Place = Places["start"];
-                Describe(player.Place);
+                place = Places[Game.StartPlaceId];
+                player.PlaceId = place.Id;
+                DescribePlace(place);
                 break;
             case GameCommandType.Quit:
                 result.Add(new GameResponseBye());
@@ -110,14 +116,15 @@ namespace AdventureBot {
             }
             return result;
 
-            void Describe(GamePlace place) {
-                if((place.Description != null) && (place.Instructions != null)) {
-                    result.Add(new GameResponseSay(place.Description));
-                    result.Add(new GameResponseSay(place.Instructions));
-                } else if(place.Description != null) {
-                    result.Add(new GameResponseSay(place.Description));
-                } else if(place.Instructions != null) {
-                    result.Add(new GameResponseSay(place.Instructions));
+            // helper functions
+            void DescribePlace(GamePlace current) {
+                if((current.Description != null) && (current.Instructions != null)) {
+                    result.Add(new GameResponseSay(current.Description));
+                    result.Add(new GameResponseSay(current.Instructions));
+                } else if(current.Description != null) {
+                    result.Add(new GameResponseSay(current.Description));
+                } else if(current.Instructions != null) {
+                    result.Add(new GameResponseSay(current.Instructions));
                 }
            }
         }

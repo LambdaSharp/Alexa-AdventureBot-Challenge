@@ -50,7 +50,7 @@ namespace AventureBot.Cli {
             GamePlayer player;
             try {
                 game = GameLoader.LoadFrom(args[0]);
-                player = new GamePlayer(game.Places["start"]);
+                player = new GamePlayer(Game.StartPlaceId);
             } catch(GameLoaderException e) {
                 Console.WriteLine($"ERROR: {e.Message}");
                 return;

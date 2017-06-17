@@ -33,36 +33,38 @@ namespace AdventureBot.Alexa {
 
         //--- Class Methods ---
         public static Session Serialize(Game game, GamePlayer player) {
+
+            // return a new session object with the serialized player information
             return new Session {
                 Attributes = new Dictionary<string, object> {
-                    ["player"] = new Dictionary<string, object> {
-                        ["place-id"] = player.Place.Id
-                    }
+                    ["player"] = JsonConvert.SerializeObject(player)
                 }
             };
         }
 
         public static GamePlayer Deserialize(Game game, Session session) {
+
+            // check if the session is new and return a new player if so
             if(session.New) {
                 LambdaLogger.Log("*** INFO: new player session started\n");
-                return new GamePlayer(game.Places["start"]);
+                return new GamePlayer(Game.StartPlaceId);
             }
+
+            // attempt to deserialize the player information
             if(!session.Attributes.TryGetValue("player", out object playerStateValue) || !(playerStateValue is JObject playerState)) {
                 LambdaLogger.Log($"*** WARNING: unable to find player state in session (type: {playerStateValue?.GetType().Name})\n");
                 LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
-                return new GamePlayer(game.Places["start"]);
+                return new GamePlayer(Game.StartPlaceId);
             }
-            if(!playerState.TryGetValue("place-id", out Newtonsoft.Json.Linq.JToken placeIdToken) || !(placeIdToken is JValue placeIdValue)) {
-                LambdaLogger.Log($"*** WARNING: unable to find place ID for player in session (type: {placeIdToken?.GetType().Name})\n");
+            var player = playerState.ToObject<GamePlayer>();
+
+            // validate the game still has a matching place for the player
+            if(!game.Places.ContainsKey(player.PlaceId)) {
+                LambdaLogger.Log($"*** WARNING: unable to find matching place for restored player in session (value: '{player.PlaceId}')\n");
                 LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
-                return new GamePlayer(game.Places["start"]);
+                return new GamePlayer(Game.StartPlaceId);
             }
-            if(!game.Places.TryGetValue((string)placeIdValue, out GamePlace place)) {
-                LambdaLogger.Log($"*** WARNING: unable to find matching place for place ID in session (value: '{(string)placeIdValue}')\n");
-                LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
-                return new GamePlayer(game.Places["start"]);
-            }
-            return new GamePlayer(place);
+            return player;
         }
     }
 }

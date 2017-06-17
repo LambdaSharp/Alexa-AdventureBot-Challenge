@@ -19,21 +19,31 @@
     {
       "name": "Describe",
       "samples": [
-        "describe"
+        "describe",
+        "describe room",
+        "where am i",
+        "what do i see",
+        "describe where i am",
+        "repeat"
       ],
       "slots": []
     },
     {
       "name": "Hint",
       "samples": [
-        "hint"
+        "hint",
+        "what now",
+        "what should i do",
+        "any hint",
+        "where should i go"
       ],
       "slots": []
     },
     {
       "name": "No",
       "samples": [
-        "no"
+        "no",
+        "nay"
       ],
       "slots": []
     },
@@ -41,7 +51,8 @@
       "name": "OptionEight",
       "samples": [
         "eight",
-        "option eight"
+        "option eight",
+        "eighth option"
       ],
       "slots": []
     },
@@ -49,7 +60,8 @@
       "name": "OptionFive",
       "samples": [
         "five",
-        "option five"
+        "option five",
+        "fifth option"
       ],
       "slots": []
     },
@@ -57,7 +69,8 @@
       "name": "OptionFour",
       "samples": [
         "four",
-        "option four"
+        "option four",
+        "fourth option"
       ],
       "slots": []
     },
@@ -65,7 +78,8 @@
       "name": "OptionNine",
       "samples": [
         "nine",
-        "option nine"
+        "option nine",
+        "ninth option"
       ],
       "slots": []
     },
@@ -73,7 +87,8 @@
       "name": "OptionOne",
       "samples": [
         "one",
-        "option one"
+        "option one",
+        "first option"
       ],
       "slots": []
     },
@@ -81,7 +96,8 @@
       "name": "OptionSeven",
       "samples": [
         "seven",
-        "option seven"
+        "option seven",
+        "seventh option"
       ],
       "slots": []
     },
@@ -89,7 +105,8 @@
       "name": "OptionSix",
       "samples": [
         "six",
-        "option six"
+        "option six",
+        "sixth option"
       ],
       "slots": []
     },
@@ -97,7 +114,8 @@
       "name": "OptionThree",
       "samples": [
         "three",
-        "option three"
+        "option three",
+        "third option"
       ],
       "slots": []
     },
@@ -105,7 +123,8 @@
       "name": "OptionTwo",
       "samples": [
         "two",
-        "option two"
+        "option two",
+        "second option"
       ],
       "slots": []
     },
@@ -113,105 +132,20 @@
       "name": "Restart",
       "samples": [
         "restart",
-        "start over"
+        "start over",
+        "begin adventure",
+        "restart adventure",
+        "do adventure again"
       ],
       "slots": []
     },
     {
       "name": "Yes",
       "samples": [
-        "yes"
+        "yes",
+        "yay"
       ],
       "slots": []
     }
-  ],
-  "dialog": {
-    "version": "1.0",
-    "intents": [
-      {
-        "name": "Describe",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "Hint",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "No",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionEight",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionFive",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionFour",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionNine",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionOne",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionSeven",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionSix",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionThree",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "OptionTwo",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "Restart",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      },
-      {
-        "name": "Yes",
-        "confirmationRequired": false,
-        "prompts": {},
-        "slots": []
-      }
-    ]
-  }
+  ]
 }

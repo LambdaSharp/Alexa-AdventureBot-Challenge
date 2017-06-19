@@ -37,7 +37,7 @@ The following steps set up the Alexa Skill with an invocation name, a predefined
 7. *Configuration*
     1. Select `AWS lambda ARN (Amazon Resource Name)`
     2. Select `North America`
-    3. Paste in the AWS lambda function ARN: `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AlexaEcho`
+    3. Paste in the AWS lambda function ARN: `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AlexaEcho` (**NOTE:** the missing account ID will be provided during the challenge)
     4. Click `Next`
 8. **Congratulations!!** Your Alexa Skill is now available on all your registered Alexa-devices, including the Amazon mobile app. Give it a whirl!
     * For Alexa devices, say: `Alexa, open Adventure Bot`
@@ -101,9 +101,20 @@ Finally, the Alexa Sill needs to be updated to point to the AdventureBot lambda 
 3. Update the AWS lambda function with the ARN you copied from the AdventureBot lambda function: (e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
 4. Click `Save`
 
-### LEVEL 3 - ???
+### LEVEL 3 - Notify Yourself When Someone Completes Your Adventure
+This part is left as an exercise to the reader.
 
-### LEVEL 4 - ???
+Modify AdventureBot so that it sends out a SNS message when a player completes an adventure. Track how long it took for the player to complete, how many place where visited, and any other statistics you think would be insightful to understand your players.
+
+### BOSS LEVEL - Handle new Players vs. Returning Players differently
+This part is left as an exercise to the reader.
+
+AdventureBot uses Alexa session state to track players through their exploration. However, when the session ends, the player state is lost. Add code to AdventureBot to store the player's state in DynamoDB. Detect at the beginning of a new session if the player has an unfinished adventure and offer to resume or restart instead..
+
+### BONUS LEVEL - Showcase your own Adventure!
+This part is left as an exercise to the reader.
+
+Create your own adventure and showcase it!
 
 ## APPENDIX A - AdventureBot File Format
 The AdventureBot uses a simple JSON file to define places. Each place has a description and a list of choices that are available to the player.
@@ -176,7 +187,18 @@ The pause action is delays further speech for the specified duration in seconds.
 ```
 
 #### Play Action
-The play action plays back an MP3 file. The URL to the MP3 file must use a https:// link.
+The play action plays back an MP3 file. Note the MP3 file must satisfy the following conditions:
+* The MP3 must be hosted at an Internet-accessible HTTPS endpoint. HTTPS is required, and the domain hosting the MP3 file must present a valid, trusted SSL certificate. Self-signed certificates cannot be used.
+* The MP3 must not contain any customer-specific or other sensitive information.
+* The MP3 must be a valid MP3 file (MPEG version 2).
+* The audio file cannot be longer than ninety (90) seconds.
+* The bit rate must be 48 kbps. Note that this bit rate gives a good result when used with spoken content, but is generally not a high enough quality for music.
+* The MP3 sample rate must be 16000 Hz.
+
+A good source of free samples can be found at [SoundEffects+](https://www.soundeffectsplus.com/).
+
+Alexa compatible MP3 can be produced with the `ffmpeg` utility:
+`ffmpeg -i <source-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <destination-file>`
 
 ```json
 {

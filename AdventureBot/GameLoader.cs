@@ -54,6 +54,7 @@ namespace AdventureBot {
                 var id = jsonPlace.Name;
                 var description = GetString(jsonPlace.Value, "description");
                 var instructions = GetString(jsonPlace.Value, "instructions");
+                bool.TryParse(GetString(jsonPlace.Value, "finished") ?? "false", out bool finished);
 
                 // parse player choices
                 var choices = new Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>>();
@@ -74,10 +75,10 @@ namespace AdventureBot {
                         }).ToArray();
                         choices[command] = actions;
                     } else {
-                       throw new GameLoaderException($"Expectd object at {jsonChoice.Value.Path} but found {jsonChoice.Value?.Type.ToString() ?? "null"} instead.");
+                       throw new GameLoaderException($"Expected object at {jsonChoice.Value.Path} but found {jsonChoice.Value?.Type.ToString() ?? "null"} instead.");
                     }
                 }
-                var place = new GamePlace(id, description, instructions, choices);
+                var place = new GamePlace(id, description, instructions, finished, choices);
                 places[place.Id] = place;
             }
 
@@ -87,6 +88,7 @@ namespace AdventureBot {
                     Game.StartPlaceId,
                     "No start place is defined for this adventure. Please check your adventure file and try again.",
                     "Please check your adventure file and try again.",
+                    false,
                     new Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>>()
                 );
             }
@@ -102,23 +104,24 @@ namespace AdventureBot {
                     if(token is JObject objInner) {
                         return objInner;
                     }
-                    throw new GameLoaderException($"Expectd object at {json.Path}.{key} but found {token?.Type.ToString() ?? "null"} instead.");
+                    throw new GameLoaderException($"Expected object at {json.Path}.{key} but found {token?.Type.ToString() ?? "null"} instead.");
                 } else {
-                   throw new GameLoaderException($"Expectd object at {json.Path} but found {json?.Type.ToString() ?? "null"} instead.");
+                   throw new GameLoaderException($"Expected object at {json.Path} but found {json?.Type.ToString() ?? "null"} instead.");
                 }
             }
 
-            string GetString(JToken token, string key) {
+            string GetString(JToken token, string key, bool required = true) {
                 if(token is JObject obj) {
                     var value = obj[key];
                     try {
                         return (string)value;
                     } catch {
-                        throw new GameLoaderException($"Expectd string at {token.Path}.{key} but found {token?.Type.ToString().ToLower() ?? "null"} instead.");
+                        throw new GameLoaderException($"Expected string at {token.Path}.{key} but found {token?.Type.ToString().ToLower() ?? "null"} instead.");
                     }
-                } else {
-                   throw new GameLoaderException($"Expectd string at {token.Path} but found {token?.Type.ToString().ToLower() ?? "null"} instead.");
+                } else if(required) {
+                   throw new GameLoaderException($"Expected string at {token.Path} but found {token?.Type.ToString().ToLower() ?? "null"} instead.");
                 }
+                return null;
             }
         }
     }

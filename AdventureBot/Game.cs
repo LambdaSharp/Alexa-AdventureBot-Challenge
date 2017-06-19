@@ -106,8 +106,10 @@ namespace AdventureBot {
                 // hints are optional; nothing else to do
                 break;
             case GameCommandType.Restart:
-                place = Places[Game.StartPlaceId];
-                player.PlaceId = place.Id;
+                if((choice == null) || !choice.Any(c => c.Key == GameActionType.Goto)) {
+                    place = Places[Game.StartPlaceId];
+                    player.PlaceId = place.Id;
+                }
                 DescribePlace(place);
                 break;
             case GameCommandType.Quit:

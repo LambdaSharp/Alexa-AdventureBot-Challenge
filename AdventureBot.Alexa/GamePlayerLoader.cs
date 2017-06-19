@@ -37,7 +37,7 @@ namespace AdventureBot.Alexa {
             // return a new session object with the serialized player information
             return new Session {
                 Attributes = new Dictionary<string, object> {
-                    ["player"] = JsonConvert.SerializeObject(player)
+                    ["player"] = player
                 }
             };
         }

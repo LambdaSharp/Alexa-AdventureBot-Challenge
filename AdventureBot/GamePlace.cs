@@ -58,14 +58,16 @@ namespace AdventureBot {
         public readonly string Id;
         public readonly string Description;
         public readonly string Instructions;
+        public readonly bool Finished;
 
         public readonly Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> Choices;
 
         //--- Constructors ---
-        public GamePlace(string id, string description, string instructions, Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> choices) {
+        public GamePlace(string id, string description, string instructions, bool finished, Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> choices) {
             Id = id;
             Description = description;
             Instructions = instructions;
+            Finished = finished;
             Choices = choices;
         }
     }

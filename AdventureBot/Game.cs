@@ -67,15 +67,22 @@ namespace AdventureBot {
 
             // check if the place has associated actions for the choice
             GamePlace place = Places[player.PlaceId];
-            if(Places[player.PlaceId].Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
+            if(place.Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
                 foreach(var action in choice) {
                     switch(action.Key) {
                     case GameActionType.Goto:
                         if(!Places.TryGetValue(action.Value, out place)) {
                             throw new GameException($"Cannot find place: '{action.Value}'");
                         }
-                        player.PlaceId = place.Id;
-                        DescribePlace(place);
+                        if(player.PlaceId != place.Id) {
+                            player.PlaceId = place.Id;
+                            DescribePlace(place);
+
+                            // check if the current place marks the end of the adventure
+                            if(place.Finished) {
+                                result.Add(new GameResponseFinished());
+                            }
+                        }
                         break;
                     case GameActionType.Say:
                         result.Add(new GameResponseSay(action.Value));
@@ -103,7 +110,7 @@ namespace AdventureBot {
                 break;
             case GameCommandType.Hint:
 
-                // hints are optional; nothing else to do
+                // hints are optional; nothing else to do by default
                 break;
             case GameCommandType.Restart:
                 if((choice == null) || !choice.Any(c => c.Key == GameActionType.Goto)) {

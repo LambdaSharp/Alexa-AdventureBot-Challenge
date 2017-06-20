@@ -59,38 +59,6 @@ namespace AdventureBot.Alexa {
             }
         }
 
-        private static IOutputSpeech ConvertToSpeech(IEnumerable<AGameResponse> responses) {
-            var ssml = new XElement("speak");
-            foreach(var response in responses) {
-                switch(response) {
-                case GameResponseSay say:
-                    ssml.Add(new XElement("p", new XText(say.Text)));
-                    break;
-                case GameResponseDelay delay:
-                    ssml.Add(new XElement("break", new XAttribute("time", (int)delay.Delay.TotalMilliseconds + "ms")));
-                    break;
-                case GameResponsePlay play:
-                    ssml.Add(new XElement("audio", new XAttribute("src", play.Url)));
-                    break;
-                case GameResponseNotUnderstood _:
-                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
-                    break;
-                case GameResponseBye _:
-                    ssml.Add(new XElement("p", new XText("Good bye.")));
-                    break;
-                case null:
-                    LambdaLogger.Log($"ERROR: null response\n");
-                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
-                    break;
-                default:
-                    LambdaLogger.Log($"ERROR: unknown response: {response.GetType().Name}\n");
-                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
-                    break;
-                }
-            }
-            return new SsmlOutputSpeech { Ssml = ssml.ToString(SaveOptions.DisableFormatting) };
-        }
-
 
         //--- Fields ---
         private readonly AmazonS3Client _s3Client;
@@ -124,7 +92,14 @@ namespace AdventureBot.Alexa {
             var game = GameLoader.Parse(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFilePath));
 
             // restore player object from session
-            var player = SessionLoader.Deserialize(game, skill.Session);
+            GamePlayer player;
+            if(skill.Session.New) {
+
+                // TODO: can we restore the player from DynamoDB?
+                player = new GamePlayer(Game.StartPlaceId);
+            } else {
+                player = SessionLoader.Deserialize(game, skill.Session);
+            }
 
             // decode skill request
             IEnumerable<AGameResponse> responses;
@@ -176,6 +151,8 @@ namespace AdventureBot.Alexa {
                         break;
                     }
                 }
+
+                // respond with serialized player state
                 if(reprompt != null) {
                     return ResponseBuilder.Ask(
                         ConvertToSpeech(responses),
@@ -203,6 +180,44 @@ namespace AdventureBot.Alexa {
                 LambdaLogger.Log($"*** WARNING: unrecognized skill request: {JsonConvert.SerializeObject(skill)}\n");
                 return ResponseBuilder.Empty();
             }
+        }
+
+        private IOutputSpeech ConvertToSpeech(IEnumerable<AGameResponse> responses) {
+            var ssml = new XElement("speak");
+            foreach(var response in responses) {
+                switch(response) {
+                case GameResponseSay say:
+                    ssml.Add(new XElement("p", new XText(say.Text)));
+                    break;
+                case GameResponseDelay delay:
+                    ssml.Add(new XElement("break", new XAttribute("time", (int)delay.Delay.TotalMilliseconds + "ms")));
+                    break;
+                case GameResponsePlay play:
+                    ssml.Add(new XElement("audio", new XAttribute("src", play.Url)));
+                    break;
+                case GameResponseNotUnderstood _:
+                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
+                    break;
+                case GameResponseBye _:
+                    ssml.Add(new XElement("p", new XText("Good bye.")));
+                    break;
+                case GameResponseFinished _:
+
+                    // TODO: player is done with the adventure
+                    break;
+                case null:
+                    LambdaLogger.Log($"ERROR: null response\n");
+                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
+                    break;
+                default:
+                    LambdaLogger.Log($"ERROR: unknown response: {response.GetType().Name}\n");
+                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
+                    break;
+                }
+            }
+            return new SsmlOutputSpeech {
+                Ssml = ssml.ToString(SaveOptions.DisableFormatting)
+            };
         }
     }
 }

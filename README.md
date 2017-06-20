@@ -135,6 +135,7 @@ The place object has multiple fields. All of them are required.
 
 * `"description"`: Text describing the place/situation the player is in. This text is automatically read when the player first enters a place and can be repeated with the built-in *describe* command.
 * `"instructions"`: Text describing the actions the player can provide. This text is automatically read when the player first enters a place and can be repeated with the built-in *help* command.
+* `"finished"`: (optional) Boolean indicating that the place marks the end of an adventure. The value is `false` by default.
 * `"choices"`: Map of choices to actions the player can make.
 
 ```json

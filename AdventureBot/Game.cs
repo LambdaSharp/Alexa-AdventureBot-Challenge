@@ -80,7 +80,9 @@ namespace AdventureBot {
 
                             // check if the current place marks the end of the adventure
                             if(place.Finished) {
-                                result.Add(new GameResponseFinished());
+                                var stats = player.Stats;
+                                stats.EndGame();
+                                result.Add(new GameResponseFinished(stats));
                             }
                         }
                         break;

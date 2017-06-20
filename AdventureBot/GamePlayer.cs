@@ -31,9 +31,10 @@ namespace AdventureBot {
         public GamePlayerStats Stats;
 
         //--- Constructors ---
-        public GamePlayer(string placeId /*, GamePlayerStats stats */) {
+        public GamePlayer(string placeId) {
             PlaceId = placeId;
-//            Stats = stats;
+            Stats = new GamePlayerStats();
+            Stats.StartGame();
         }
     }
 }

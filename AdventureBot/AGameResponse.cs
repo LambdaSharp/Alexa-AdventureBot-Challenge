@@ -65,5 +65,16 @@ namespace AdventureBot {
 
     public class GameResponseBye : AGameResponse { }
 
-    public class GameResponseFinished : AGameResponse { }
+    public class GameResponseFinished : AGameResponse {
+        public GameResponseFinished(GamePlayerStats stats) {
+            this.Stats = stats;
+        }
+
+        public GamePlayerStats Stats;
+        public TimeSpan GameDuration {
+            get {
+                return Stats.GameEnded.Subtract(Stats.GameStarted);
+            }
+        }
+    }
 }

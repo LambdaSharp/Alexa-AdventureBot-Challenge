@@ -9,8 +9,6 @@ namespace AdventureBot
         public DateTime GameEnded { get; set; }
 
         //--- Constructors ---
-        public GamePlayerStats() {
-        }
 
         //--- Methods ---
         public void StartGame() {

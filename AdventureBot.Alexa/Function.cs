@@ -208,10 +208,8 @@ namespace AdventureBot.Alexa {
                 case GameResponseBye _:
                     ssml.Add(new XElement("p", new XText("Good bye.")));
                     break;
-                case GameResponseFinished _:
-
-                    // TODO: player is done with the adventure
-                    var publishedResponse = _snsClient.PublishAsync(_topicArn, $"The player finished the game").Result;
+                case GameResponseFinished r:
+                    var publishedResponse = _snsClient.PublishAsync(_topicArn, $"The player finished the game in {r.GameDuration.TotalSeconds} seconds").Result;
                     var statusCode = publishedResponse.HttpStatusCode;
                     if(statusCode != HttpStatusCode.Created || statusCode != HttpStatusCode.Accepted || statusCode != HttpStatusCode.OK) {
                         LambdaLogger.Log($"ERROR: Could not published to SNS: {statusCode}");

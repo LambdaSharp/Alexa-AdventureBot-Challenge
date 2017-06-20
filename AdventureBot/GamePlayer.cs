@@ -28,10 +28,12 @@ namespace AdventureBot {
 
         //--- Fields ---
         public string PlaceId;
+        public GamePlayerStats Stats;
 
         //--- Constructors ---
-        public GamePlayer(string placeId) {
+        public GamePlayer(string placeId /*, GamePlayerStats stats */) {
             PlaceId = placeId;
+//            Stats = stats;
         }
     }
 }

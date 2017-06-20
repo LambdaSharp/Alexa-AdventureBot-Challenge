@@ -40,6 +40,7 @@ using Amazon.S3;
 using Amazon.SimpleNotificationService;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
@@ -67,6 +68,8 @@ namespace AdventureBot.Alexa {
         private readonly string _adventureFileBucket;
         private readonly string _adventureFilePath;
 
+        private string _topicArn;
+
         //--- Constructors ---
         public Function() {
 
@@ -74,6 +77,10 @@ namespace AdventureBot.Alexa {
             var adventureFile = System.Environment.GetEnvironmentVariable("adventure_file");
             if(string.IsNullOrEmpty(adventureFile)) {
                 throw new ArgumentException("missing S3 url for adventure json file", "adventure_file");
+            }
+            _topicArn = System.Environment.GetEnvironmentVariable("topic_arn");
+            if(string.IsNullOrEmpty(_topicArn)) {
+                throw new ArgumentException("missing SNS topic ARN");
             }
             var adventureFileUrl = new Uri(adventureFile);
             _adventureFileBucket = adventureFileUrl.Host;
@@ -204,6 +211,11 @@ namespace AdventureBot.Alexa {
                 case GameResponseFinished _:
 
                     // TODO: player is done with the adventure
+                    var publishedResponse = _snsClient.PublishAsync(_topicArn, $"The player finished the game").Result;
+                    var statusCode = publishedResponse.HttpStatusCode;
+                    if(statusCode != HttpStatusCode.Created || statusCode != HttpStatusCode.Accepted || statusCode != HttpStatusCode.OK) {
+                        LambdaLogger.Log($"ERROR: Could not published to SNS: {statusCode}");
+                    }
                     break;
                 case null:
                     LambdaLogger.Log($"ERROR: null response\n");

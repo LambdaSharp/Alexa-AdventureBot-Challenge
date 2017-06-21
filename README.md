@@ -138,7 +138,7 @@ The place object has multiple fields. All of them are required.
 * `"finished"`: (optional) Boolean indicating that the place marks the end of an adventure. The value is `false` by default.
 * `"choices"`: Map of choices to actions the player can make.
 
-```json
+```
 {
     "description": "You are in a room.",
     "instructions": "To go North, say 1.",
@@ -155,7 +155,7 @@ The choice object associates a command with zero or more actions. The field name
 * `"restart"`
 * `"quit"`
 
-```json
+```
 {
     "yes": [ ... ],
     "no": [ ... ]
@@ -172,7 +172,7 @@ The action object associates an action with an argument. The field name must be 
 #### Say Action
 The say action converts text into speech.
 
-```json
+```
 {
     "say": [ "You open the door." ]
 }
@@ -181,7 +181,7 @@ The say action converts text into speech.
 #### Pause Action
 The pause action is delays further speech for the specified duration in seconds.
 
-```json
+```
 {
     "pause": [ 0.5 ]
 }
@@ -201,7 +201,7 @@ A good source of free samples can be found at [SoundEffects+](https://www.sounde
 Alexa compatible MP3 can be produced with the `ffmpeg` utility:
 `ffmpeg -i <source-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <destination-file>`
 
-```json
+```
 {
     "play": [ "https://example.org/door-close.mp3" ]
 }

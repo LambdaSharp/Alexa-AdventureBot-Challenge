@@ -124,23 +124,20 @@ namespace AdventureBot.Alexa {
 
             // restore player object from session
             GamePlayer player;
-            if(skill.Session.New) {
-                var response = _dynamoClient.GetItemAsync(ADVENTURE_GAME_DB_TABLE, new Dictionary<string, Amazon.DynamoDBv2.Model.AttributeValue> {
-                    { "user_id", new AttributeValue { S = userId } }
-                }).Result;
-                Console.WriteLine($"DynamoDB response: {response.Item}");
-                var item = response.Item;
-                if(item.TryGetValue("user", out AttributeValue userStr)) {
-                    var userObj = JsonConvert.DeserializeObject<GamePlayer>(userStr.S);
-                    if(userObj != null) {
-                        player = new GamePlayer(userObj.PlaceId);
-                    }
+
+            var response = _dynamoClient.GetItemAsync(ADVENTURE_GAME_DB_TABLE, new Dictionary<string, Amazon.DynamoDBv2.Model.AttributeValue> {
+                { "user_id", new AttributeValue { S = userId } }
+            }).Result;
+            var item = response.Item;
+            if(item.TryGetValue("user", out AttributeValue userStr)) {
+                var userObj = JsonConvert.DeserializeObject<GamePlayer>(userStr.S);
+                if(userObj != null) {
+                    player = new GamePlayer(userObj.PlaceId);
                 } else {
-                    player = new GamePlayer(Game.StartPlaceId);
+                    player = new GamePlayer(Game.StartPlaceId);                    
                 }
-                player = new GamePlayer(Game.StartPlaceId);
             } else {
-                player = SessionLoader.Deserialize(game, skill.Session);
+                player = new GamePlayer(Game.StartPlaceId);
             }
 
             // decode skill request

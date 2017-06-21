@@ -43,10 +43,6 @@ namespace AdventureBot.Alexa {
                 }
             };
         }
-
-        public static GamePlayer Deserialize(Game game) {
-            throw new NotImplementedException();
-        }
         public static GamePlayer Deserialize(Game game, Session session) {
 
             // check if the session is new and return a new player if so

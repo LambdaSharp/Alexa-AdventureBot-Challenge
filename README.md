@@ -124,7 +124,7 @@ The main object has only one field called `"places"`.
 
 * `"places"`: Map of place IDs to place objects. This map must contain a place called `"start"`.
 
-```json
+```
 {
     "places": { ... }
 }

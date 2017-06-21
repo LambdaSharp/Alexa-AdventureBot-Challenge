@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+using Amazon.DynamoDBv2.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -68,7 +69,10 @@ namespace AdventureBot.Alexa {
         private readonly string _adventureFileBucket;
         private readonly string _adventureFilePath;
 
-        private string _topicArn;
+        private readonly string TOPIC_ARN;
+        private readonly string ADVENTURE_GAME_DB_TABLE;
+
+        private readonly Func<string, Action<GamePlayer>> PERSIST_TO_DYNAMO_BUILDER;
 
         //--- Constructors ---
         public Function() {
@@ -78,9 +82,13 @@ namespace AdventureBot.Alexa {
             if(string.IsNullOrEmpty(adventureFile)) {
                 throw new ArgumentException("missing S3 url for adventure json file", "adventure_file");
             }
-            _topicArn = System.Environment.GetEnvironmentVariable("topic_arn");
-            if(string.IsNullOrEmpty(_topicArn)) {
-                throw new ArgumentException("missing SNS topic ARN");
+            TOPIC_ARN = System.Environment.GetEnvironmentVariable("topic_arn");
+            if(string.IsNullOrEmpty(TOPIC_ARN)) {
+                throw new ArgumentException("missing topic_arn configuration variable");
+            }
+            ADVENTURE_GAME_DB_TABLE = System.Environment.GetEnvironmentVariable("table_name");
+            if(string.IsNullOrEmpty(ADVENTURE_GAME_DB_TABLE)) {
+                throw new ArgumentException("missing table_name configuration variable");
             }
             var adventureFileUrl = new Uri(adventureFile);
             _adventureFileBucket = adventureFileUrl.Host;
@@ -90,10 +98,26 @@ namespace AdventureBot.Alexa {
             _s3Client = new AmazonS3Client();
             _snsClient = new AmazonSimpleNotificationServiceClient();
             _dynamoClient = new AmazonDynamoDBClient();
+
+            PERSIST_TO_DYNAMO_BUILDER = userId => {
+                return p => {
+                    var response = _dynamoClient.PutItemAsync(
+                        new PutItemRequest(
+                            ADVENTURE_GAME_DB_TABLE,
+                            new Dictionary<string, AttributeValue> {
+                                { "user_id", new AttributeValue { S = userId} },
+                                { "user", new AttributeValue { S = JsonConvert.SerializeObject(p) }}
+                            }
+                        )
+                    ).Result;
+                };
+            };
         }
 
         //--- Methods ---
         public SkillResponse FunctionHandler(SkillRequest skill, ILambdaContext context) {
+            var userId = skill.Session.User.UserId;
+            var persistToDynamo = PERSIST_TO_DYNAMO_BUILDER(userId);
 
             // load adventure from S3
             var game = GameLoader.Parse(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFilePath));
@@ -101,8 +125,19 @@ namespace AdventureBot.Alexa {
             // restore player object from session
             GamePlayer player;
             if(skill.Session.New) {
-
-                // TODO: can we restore the player from DynamoDB?
+                var response = _dynamoClient.GetItemAsync(ADVENTURE_GAME_DB_TABLE, new Dictionary<string, Amazon.DynamoDBv2.Model.AttributeValue> {
+                    { "user_id", new AttributeValue { S = userId } }
+                }).Result;
+                Console.WriteLine($"DynamoDB response: {response.Item}");
+                var item = response.Item;
+                if(item.TryGetValue("user", out AttributeValue userStr)) {
+                    var userObj = JsonConvert.DeserializeObject<GamePlayer>(userStr.S);
+                    if(userObj != null) {
+                        player = new GamePlayer(userObj.PlaceId);
+                    }
+                } else {
+                    player = new GamePlayer(Game.StartPlaceId);
+                }
                 player = new GamePlayer(Game.StartPlaceId);
             } else {
                 player = SessionLoader.Deserialize(game, skill.Session);
@@ -123,7 +158,10 @@ namespace AdventureBot.Alexa {
                     new Reprompt {
                         OutputSpeech = ConvertToSpeech(reprompt)
                     },
-                    SessionLoader.Serialize(game, player)
+                    SessionLoader.Serialize(
+                        game,
+                        player,
+                        persistToDynamo)
                 );
 
             // skill was activated with an intent
@@ -166,7 +204,7 @@ namespace AdventureBot.Alexa {
                         new Reprompt {
                             OutputSpeech = ConvertToSpeech(reprompt)
                         },
-                        SessionLoader.Serialize(game, player)
+                        SessionLoader.Serialize(game, player, persistToDynamo)
                     );
                 }
                 return ResponseBuilder.Tell(ConvertToSpeech(responses));
@@ -174,12 +212,18 @@ namespace AdventureBot.Alexa {
             // skill session ended (no response expected)
             case SessionEndedRequest ended:
                 LambdaLogger.Log("*** INFO: session ended\n");
+
+                // TODO(cesarn): Should I persist state in this case with the placeId set to the `start`?
+                // persistToDynamo(player);
                 return ResponseBuilder.Empty();
 
             // exception reported on previous response (no response expected)
             case SystemExceptionRequest error:
                 LambdaLogger.Log("*** INFO: system exception\n");
                 LambdaLogger.Log($"*** EXCEPTION: skill request: {JsonConvert.SerializeObject(skill)}\n");
+
+                // NOTE(cesarn): Should I persist state in this case?
+                // persistToDynamo(player);
                 return ResponseBuilder.Empty();
 
             // unknown skill received (no response expected)
@@ -209,7 +253,7 @@ namespace AdventureBot.Alexa {
                     ssml.Add(new XElement("p", new XText("Good bye.")));
                     break;
                 case GameResponseFinished r:
-                    var publishedResponse = _snsClient.PublishAsync(_topicArn, $"The player finished the game in {r.GameDuration.TotalSeconds} seconds").Result;
+                    var publishedResponse = _snsClient.PublishAsync(TOPIC_ARN, $"The player finished the game in {r.GameDuration.TotalSeconds} seconds").Result;
                     var statusCode = publishedResponse.HttpStatusCode;
                     if(statusCode != HttpStatusCode.Created || statusCode != HttpStatusCode.Accepted || statusCode != HttpStatusCode.OK) {
                         LambdaLogger.Log($"ERROR: Could not published to SNS: {statusCode}");

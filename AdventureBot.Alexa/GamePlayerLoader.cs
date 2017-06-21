@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
+using System;
 using System.Collections.Generic;
 using Alexa.NET.Request;
 using Amazon.Lambda.Core;
@@ -32,8 +32,10 @@ namespace AdventureBot.Alexa {
     public static class SessionLoader {
 
         //--- Class Methods ---
-        public static Session Serialize(Game game, GamePlayer player) {
-
+        public static Session Serialize(Game game, GamePlayer player, Action<GamePlayer> storeInDbFunc) {
+            if(storeInDbFunc != null) {
+                storeInDbFunc(player);
+            }
             // return a new session object with the serialized player information
             return new Session {
                 Attributes = new Dictionary<string, object> {
@@ -41,7 +43,6 @@ namespace AdventureBot.Alexa {
                 }
             };
         }
-
         public static GamePlayer Deserialize(Game game, Session session) {
 
             // check if the session is new and return a new player if so

@@ -65,6 +65,10 @@ namespace AdventureBot.Alexa {
             }
         }
 
+        private static string UserIdToSessionRecordKey(string userId) {
+            var md5 = System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(userId));
+            return $"resume-{new Guid(md5):N}";
+        }
 
         //--- Fields ---
         private readonly AmazonS3Client _s3Client;
@@ -110,177 +114,175 @@ namespace AdventureBot.Alexa {
             } catch(Exception e) {
                 LambdaLogger.Log($"*** EXCEPTION: {e}\n");
                 return ResponseBuilder.Tell(new PlainTextOutputSpeech {
-                    Text = "There was an error parsing the adventure file. Please check the formatting of the file and try again."
+                    Text = "There was an error parsing the adventure file. " +
+                        "Make sure the adventure file is properly formatted."
                 });
             }
 
             // restore player object from session
             var player = RestoreGamePlayer(game, skill.Session);
             LambdaLogger.Log($"*** INFO: player status: {player.Status}\n");
-            try {
 
-                // decode skill request
-                IEnumerable<AGameResponse> responses;
-                IEnumerable<AGameResponse> reprompt = null;
-                switch(skill.Request) {
+            // decode skill request
+            IEnumerable<AGameResponse> responses;
+            IEnumerable<AGameResponse> reprompt = null;
+            switch(skill.Request) {
 
-                // skill was activated without an intent
-                case LaunchRequest launch:
-                    LambdaLogger.Log($"*** INFO: launch\n");
+            // skill was activated without an intent
+            case LaunchRequest launch:
+                LambdaLogger.Log($"*** INFO: launch\n");
 
-                    // check status of player
-                    switch(player.Status) {
-                    case GamePlayerStatus.InProgress:
-                    default:
-
-                        // unknown status, pretend player is in a new state and continue
-                        player.Status = GamePlayerStatus.New;
-                        goto case GamePlayerStatus.New;
-                    case GamePlayerStatus.New:
-                        player.Status = GamePlayerStatus.InProgress;
-
-                        // kick off the adventure!
-                        player.Status = GamePlayerStatus.InProgress;
-                        responses = game.TryDo(player, GameCommandType.Restart);
-                        reprompt = game.TryDo(player, GameCommandType.Help);
-                        break;
-                    case GamePlayerStatus.Restored:
-
-                        // ask player if the game session should be restored from the database
-                        responses = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
-                        reprompt = responses;
-                        break;
-                    }
-                    break;
-
-                // skill was activated with an intent
-                case IntentRequest intent:
-                    var isCommandType = Enum.TryParse(intent.Intent.Name, true, out GameCommandType command);
-
-                    // check status of player
-                    switch(player.Status) {
-                    default:
-
-                        // unknown status, pretend player is in a new state and continue
-                        player.Status = GamePlayerStatus.New;
-                        goto case GamePlayerStatus.New;
-                    case GamePlayerStatus.New:
-
-                        // adventure is in progress, mark player status accordingly
-                        player.Status = GamePlayerStatus.InProgress;
-                        goto case GamePlayerStatus.InProgress;
-                    case GamePlayerStatus.InProgress:
-
-                        // check if the intent is an adventure intent
-                        if(isCommandType) {
-                            LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
-                            responses = game.TryDo(player, command);
-                            reprompt = game.TryDo(player, GameCommandType.Help);
-                        } else {
-                            switch(intent.Intent.Name) {
-
-                            // built-in intents
-                            case BuiltInIntent.Help:
-                                LambdaLogger.Log($"*** INFO: built-in help intent ({intent.Intent.Name})\n");
-                                responses = game.TryDo(player, GameCommandType.Help);
-                                reprompt = game.TryDo(player, GameCommandType.Help);
-                                break;
-
-                            case BuiltInIntent.Stop:
-                            case BuiltInIntent.Cancel:
-                                LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
-                                responses = game.TryDo(player, GameCommandType.Quit);
-                                break;
-
-                            // unknown & unsupported intents
-                            default:
-                                LambdaLogger.Log("*** WARNING: intent not recognized\n");
-                                responses = new[] { new GameResponseNotUnderstood() };
-                                reprompt = game.TryDo(player, GameCommandType.Help);
-                                break;
-                            }
-                        }
-                        break;
-                    case GamePlayerStatus.Restored:
-
-                        // check if the intent is an adventure intent
-                        if(isCommandType) {
-                            LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
-                            switch(command) {
-                            case GameCommandType.Yes:
-                                player.Status = GamePlayerStatus.InProgress;
-                                responses = game.TryDo(player, GameCommandType.Describe);
-                                reprompt = game.TryDo(player, GameCommandType.Help);
-                                break;
-                            case GameCommandType.No:
-                                player.Status = GamePlayerStatus.InProgress;
-                                responses = game.TryDo(player, GameCommandType.Restart);
-                                reprompt = game.TryDo(player, GameCommandType.Help);
-                                break;
-                            default:
-
-                                // unexpected response; ask again
-                                responses = new[] { new GameResponseSay("Sorry, I didn't understand your response. Would you like to continue your previous adventure?") };
-                                reprompt = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
-                                break;
-                            }
-                        } else {
-                            switch(intent.Intent.Name) {
-
-                            // built-in intents
-                            case BuiltInIntent.Stop:
-                            case BuiltInIntent.Cancel:
-                                LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
-                                player.Status = GamePlayerStatus.InProgress;
-                                responses = game.TryDo(player, GameCommandType.Quit);
-                                break;
-
-                            // unknown & unsupported intents
-                            case BuiltInIntent.Help:
-                            default:
-                                LambdaLogger.Log("*** WARNING: intent not recognized\n");
-
-                                // unexpected response; ask again
-                                responses = new[] { new GameResponseSay("Sorry, I didn't understand your response. Would you like to continue your previous adventure?") };
-                                reprompt = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                    break;
-
-                // skill session ended (no response expected)
-                case SessionEndedRequest ended:
-                    LambdaLogger.Log("*** INFO: session ended\n");
-                    return ResponseBuilder.Empty();
-
-                // exception reported on previous response (no response expected)
-                case SystemExceptionRequest error:
-                    LambdaLogger.Log("*** INFO: system exception\n");
-                    LambdaLogger.Log($"*** EXCEPTION: skill request: {JsonConvert.SerializeObject(skill)}\n");
-                    return ResponseBuilder.Empty();
-
-                // unknown skill received (no response expected)
+                // check status of player
+                switch(player.Status) {
+                case GamePlayerStatus.InProgress:
                 default:
-                    LambdaLogger.Log($"*** WARNING: unrecognized skill request: {JsonConvert.SerializeObject(skill)}\n");
-                    return ResponseBuilder.Empty();
-                }
 
-                // respond with serialized player state
-                if(reprompt != null) {
-                    return ResponseBuilder.Ask(
-                        ConvertToSpeech(responses),
-                        new Reprompt {
-                            OutputSpeech = ConvertToSpeech(reprompt)
-                        },
-                        SessionLoader.Serialize(game, player)
-                    );
+                    // unknown status, pretend player is in a new state and continue
+                    player.Status = GamePlayerStatus.New;
+                    goto case GamePlayerStatus.New;
+                case GamePlayerStatus.New:
+                    player.Status = GamePlayerStatus.InProgress;
+
+                    // kick off the adventure!
+                    player.Status = GamePlayerStatus.InProgress;
+                    responses = game.TryDo(player, GameCommandType.Restart);
+                    reprompt = game.TryDo(player, GameCommandType.Help);
+                    break;
+                case GamePlayerStatus.Restored:
+
+                    // ask player if the game session should be restored from the database
+                    responses = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
+                    reprompt = responses;
+                    break;
                 }
-                return ResponseBuilder.Tell(ConvertToSpeech(responses));
-            } finally {
-                StoreGamePlayer(game, player, skill.Session);
+                break;
+
+            // skill was activated with an intent
+            case IntentRequest intent:
+                var isCommandType = Enum.TryParse(intent.Intent.Name, true, out GameCommandType command);
+
+                // check status of player
+                switch(player.Status) {
+                default:
+
+                    // unknown status, pretend player is in a new state and continue
+                    player.Status = GamePlayerStatus.New;
+                    goto case GamePlayerStatus.New;
+                case GamePlayerStatus.New:
+
+                    // adventure is in progress, mark player status accordingly
+                    player.Status = GamePlayerStatus.InProgress;
+                    goto case GamePlayerStatus.InProgress;
+                case GamePlayerStatus.InProgress:
+
+                    // check if the intent is an adventure intent
+                    if(isCommandType) {
+                        LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
+                        responses = game.TryDo(player, command);
+                        reprompt = game.TryDo(player, GameCommandType.Help);
+                    } else {
+                        switch(intent.Intent.Name) {
+
+                        // built-in intents
+                        case BuiltInIntent.Help:
+                            LambdaLogger.Log($"*** INFO: built-in help intent ({intent.Intent.Name})\n");
+                            responses = game.TryDo(player, GameCommandType.Help);
+                            reprompt = game.TryDo(player, GameCommandType.Help);
+                            break;
+
+                        case BuiltInIntent.Stop:
+                        case BuiltInIntent.Cancel:
+                            LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
+                            responses = game.TryDo(player, GameCommandType.Quit);
+                            break;
+
+                        // unknown & unsupported intents
+                        default:
+                            LambdaLogger.Log("*** WARNING: intent not recognized\n");
+                            responses = new[] { new GameResponseNotUnderstood() };
+                            reprompt = game.TryDo(player, GameCommandType.Help);
+                            break;
+                        }
+                    }
+                    break;
+                case GamePlayerStatus.Restored:
+
+                    // check if the intent is an adventure intent
+                    if(isCommandType) {
+                        LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
+                        switch(command) {
+                        case GameCommandType.Yes:
+                            player.Status = GamePlayerStatus.InProgress;
+                            responses = game.TryDo(player, GameCommandType.Describe);
+                            reprompt = game.TryDo(player, GameCommandType.Help);
+                            break;
+                        case GameCommandType.No:
+                            player.Status = GamePlayerStatus.InProgress;
+                            responses = game.TryDo(player, GameCommandType.Restart);
+                            reprompt = game.TryDo(player, GameCommandType.Help);
+                            break;
+                        default:
+
+                            // unexpected response; ask again
+                            responses = new[] { new GameResponseSay("Sorry, I didn't understand your response. Would you like to continue your previous adventure?") };
+                            reprompt = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
+                            break;
+                        }
+                    } else {
+                        switch(intent.Intent.Name) {
+
+                        // built-in intents
+                        case BuiltInIntent.Stop:
+                        case BuiltInIntent.Cancel:
+                            LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
+                            player.Status = GamePlayerStatus.InProgress;
+                            responses = game.TryDo(player, GameCommandType.Quit);
+                            break;
+
+                        // unknown & unsupported intents
+                        case BuiltInIntent.Help:
+                        default:
+                            LambdaLogger.Log("*** WARNING: intent not recognized\n");
+
+                            // unexpected response; ask again
+                            responses = new[] { new GameResponseSay("Sorry, I didn't understand your response. Would you like to continue your previous adventure?") };
+                            reprompt = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
+                            break;
+                        }
+                    }
+                    break;
+                }
+                break;
+
+            // skill session ended (no response expected)
+            case SessionEndedRequest ended:
+                LambdaLogger.Log("*** INFO: session ended\n");
+                return ResponseBuilder.Empty();
+
+            // exception reported on previous response (no response expected)
+            case SystemExceptionRequest error:
+                LambdaLogger.Log("*** INFO: system exception\n");
+                LambdaLogger.Log($"*** EXCEPTION: skill request: {JsonConvert.SerializeObject(skill)}\n");
+                return ResponseBuilder.Empty();
+
+            // unknown skill received (no response expected)
+            default:
+                LambdaLogger.Log($"*** WARNING: unrecognized skill request: {JsonConvert.SerializeObject(skill)}\n");
+                return ResponseBuilder.Empty();
             }
+
+            // respond with serialized player state
+            var session = StoreGamePlayer(game, player);
+            if(reprompt != null) {
+                return ResponseBuilder.Ask(
+                    ConvertToSpeech(responses),
+                    new Reprompt {
+                        OutputSpeech = ConvertToSpeech(reprompt)
+                    },
+                    session
+                );
+            }
+            return ResponseBuilder.Tell(ConvertToSpeech(responses));
         }
 
         private IOutputSpeech ConvertToSpeech(IEnumerable<AGameResponse> responses) {
@@ -322,36 +324,67 @@ namespace AdventureBot.Alexa {
         }
 
         private GamePlayer RestoreGamePlayer(Game game, Session session) {
-            GamePlayer player;
-            if(session.New && (_tableName != null)) {
+            var recordId = UserIdToSessionRecordKey(session.User.UserId);
+            GamePlayer player = null;
+            if(session.New) {
 
-                // check if a session can be restored from the database
-                var record = _dynamoClient.GetItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = session.User.UserId }
-                }).Result;
-                if(record.IsItemSet) {
-                    player = JsonConvert.DeserializeObject<GamePlayer>(record.Item["State"].S);
-                    player.Status = GamePlayerStatus.Restored;
-                } else {
-                    player = new GamePlayer(Game.StartPlaceId);
+                // check if the player can be restored from the session table
+                if(_tableName != null) {
+
+                    // check if a session can be restored from the database
+                    var record = _dynamoClient.GetItemAsync(_tableName, new Dictionary<string, AttributeValue> {
+                        ["Id"] = new AttributeValue { S = recordId }
+                    }).Result;
+                    if(record.IsItemSet) {
+                        LambdaLogger.Log("*** INFO: restoring player from session table\n");
+                        player = JsonConvert.DeserializeObject<GamePlayer>(record.Item["State"].S);
+                        player.Status = GamePlayerStatus.Restored;
+                    }
                 }
             } else {
-                player = SessionLoader.Deserialize(game, session);
+
+                // attempt to deserialize the player information
+                if(!session.Attributes.TryGetValue("player", out object playerStateValue) || !(playerStateValue is JObject playerState)) {
+                    LambdaLogger.Log($"*** WARNING: unable to find player state in session (type: {playerStateValue?.GetType().Name})\n");
+                    LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+                } else {
+                    player = playerState.ToObject<GamePlayer>();
+
+                    // validate the game still has a matching place for the player
+                    if(!game.Places.ContainsKey(player.PlaceId)) {
+                        LambdaLogger.Log($"*** WARNING: unable to find matching place for restored player in session (value: '{player.PlaceId}')\n");
+                        LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+                        player = null;
+                    }
+                }
+            }
+
+            // create new player if no player was restored
+            if(player == null) {
+                LambdaLogger.Log("*** INFO: new player session started\n");
+                player = new GamePlayer(recordId, Game.StartPlaceId);
             }
             return player;
         }
 
-        private void StoreGamePlayer(Game game, GamePlayer player, Session session) {
+        private Session StoreGamePlayer(Game game, GamePlayer player) {
             if(game.Places.TryGetValue(player.PlaceId, out GamePlace place) && !place.Finished) {
+                LambdaLogger.Log("*** INFO: storing player in session table\n");
                 _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = session.User.UserId },
+                    ["Id"] = new AttributeValue { S = player.RecordId },
                     ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player) }
                 }).Wait();
             } else {
+                LambdaLogger.Log("*** INFO: deleting player from session table\n");
                 _dynamoClient.DeleteItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = session.User.UserId }
+                    ["Id"] = new AttributeValue { S = player.RecordId }
                 }).Wait();
             }
+            return new Session {
+                Attributes = new Dictionary<string, object> {
+                    ["player"] = player
+                }
+            };
         }
     }
 }

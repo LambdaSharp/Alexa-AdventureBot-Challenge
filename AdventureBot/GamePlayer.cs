@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+using System;
+
 namespace AdventureBot {
 
     public enum GamePlayerStatus {
@@ -33,13 +35,16 @@ namespace AdventureBot {
     public class GamePlayer {
 
         //--- Fields ---
+        public string RecordId;
         public string PlaceId;
-        public GamePlayerStatus Status;
+        public GamePlayerStatus Status = GamePlayerStatus.New;
+        public DateTime Start = DateTime.UtcNow;
+        public int Steps = 0;
 
         //--- Constructors ---
-        public GamePlayer(string placeId) {
+        public GamePlayer(string recordId, string placeId) {
+            RecordId = recordId;
             PlaceId = placeId;
-            Status = GamePlayerStatus.New;
         }
     }
 }

@@ -24,14 +24,22 @@
 
 namespace AdventureBot {
 
+    public enum GamePlayerStatus {
+        New,
+        InProgress,
+        Restored
+    }
+
     public class GamePlayer {
 
         //--- Fields ---
         public string PlaceId;
+        public GamePlayerStatus Status;
 
         //--- Constructors ---
         public GamePlayer(string placeId) {
             PlaceId = placeId;
+            Status = GamePlayerStatus.New;
         }
     }
 }

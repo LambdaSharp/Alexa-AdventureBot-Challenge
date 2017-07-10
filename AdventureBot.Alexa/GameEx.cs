@@ -35,7 +35,7 @@ namespace AdventureBot.Alexa {
                 return game.Do(player, command);
             } catch(GameException e) {
                 LambdaLogger.Log($"*** ERROR: a game exception occurred ({e.Message})\n");
-                return new[] { new GameResponseSay("") };
+                return new[] { new GameResponseSay("Oops, something went wrong. Please try again.") };
             } catch(Exception e) {
                 LambdaLogger.Log($"*** ERROR: {e}\n");
                 return new[] { new GameResponseSay("Oops, something went wrong. Please try again.") };

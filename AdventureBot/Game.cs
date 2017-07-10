@@ -52,6 +52,7 @@ namespace AdventureBot {
         //--- Methods ---
         public IEnumerable<AGameResponse> Do(GamePlayer player, GameCommandType command) {
             var result = new List<AGameResponse>();
+            ++player.CommandsIssued;
 
             // some commands are optional and don't require to be defined for a place
             var optional = false;
@@ -77,11 +78,6 @@ namespace AdventureBot {
                         if(player.PlaceId != place.Id) {
                             player.PlaceId = place.Id;
                             DescribePlace(place);
-
-                            // check if the current place marks the end of the adventure
-                            if(place.Finished) {
-                                result.Add(new GameResponseFinished());
-                            }
                         }
                         break;
                     case GameActionType.Say:
@@ -113,6 +109,8 @@ namespace AdventureBot {
                 // hints are optional; nothing else to do by default
                 break;
             case GameCommandType.Restart:
+
+                // check if current place has custom instructions for handling a restart
                 if((choice == null) || !choice.Any(c => c.Key == GameActionType.Goto)) {
                     place = Places[Game.StartPlaceId];
                     player.PlaceId = place.Id;

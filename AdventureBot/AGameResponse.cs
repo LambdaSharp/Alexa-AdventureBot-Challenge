@@ -64,6 +64,4 @@ namespace AdventureBot {
     public class GameResponseNotUnderstood : AGameResponse { }
 
     public class GameResponseBye : AGameResponse { }
-
-    public class GameResponseFinished : AGameResponse { }
 }

@@ -77,6 +77,7 @@ namespace AdventureBot.Alexa {
         private readonly string _adventureFileBucket;
         private readonly string _adventureFilePath;
         private readonly string _tableName;
+        private readonly string _gameFinishedTopic;
 
         //--- Constructors ---
         public Function() {
@@ -88,6 +89,7 @@ namespace AdventureBot.Alexa {
                 _adventureFilePath = adventureFileUrl.AbsolutePath.Trim('/');
             }
             _tableName = System.Environment.GetEnvironmentVariable("sessions_table_name");
+            _gameFinishedTopic = System.Environment.GetEnvironmentVariable("game_finished_topic");
 
             // initialize clients
             _s3Client = new AmazonS3Client();
@@ -159,7 +161,7 @@ namespace AdventureBot.Alexa {
 
             // skill was activated with an intent
             case IntentRequest intent:
-                var isCommandType = Enum.TryParse(intent.Intent.Name, true, out GameCommandType command);
+                var isGameCommand = Enum.TryParse(intent.Intent.Name, true, out GameCommandType command);
 
                 // check status of player
                 switch(player.Status) {
@@ -176,7 +178,7 @@ namespace AdventureBot.Alexa {
                 case GamePlayerStatus.InProgress:
 
                     // check if the intent is an adventure intent
-                    if(isCommandType) {
+                    if(isGameCommand) {
                         LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
                         responses = game.TryDo(player, command);
                         reprompt = game.TryDo(player, GameCommandType.Help);
@@ -208,7 +210,7 @@ namespace AdventureBot.Alexa {
                 case GamePlayerStatus.Restored:
 
                     // check if the intent is an adventure intent
-                    if(isCommandType) {
+                    if(isGameCommand) {
                         LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
                         switch(command) {
                         case GameCommandType.Yes:
@@ -271,6 +273,11 @@ namespace AdventureBot.Alexa {
                 return ResponseBuilder.Empty();
             }
 
+            // send out notification if player reaches the end
+            if((_gameFinishedTopic != null) && game.Places.TryGetValue(player.PlaceId, out GamePlace place) && place.Finished) {
+                _snsClient.PublishAsync(_gameFinishedTopic, JsonConvert.SerializeObject(player, Formatting.None)).Wait();
+            }
+
             // respond with serialized player state
             var session = StoreGamePlayer(game, player);
             if(reprompt != null) {
@@ -303,10 +310,6 @@ namespace AdventureBot.Alexa {
                     break;
                 case GameResponseBye _:
                     ssml.Add(new XElement("p", new XText("Good bye.")));
-                    break;
-                case GameResponseFinished _:
-
-                    // TODO: player is done with the adventure
                     break;
                 case null:
                     LambdaLogger.Log($"ERROR: null response\n");
@@ -372,7 +375,7 @@ namespace AdventureBot.Alexa {
                 LambdaLogger.Log("*** INFO: storing player in session table\n");
                 _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
                     ["Id"] = new AttributeValue { S = player.RecordId },
-                    ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player) }
+                    ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player, Formatting.None) }
                 }).Wait();
             } else {
                 LambdaLogger.Log("*** INFO: deleting player from session table\n");

@@ -49,6 +49,7 @@ namespace AdventureBot.Alexa {
     public class Function {
 
         //--- Constants ---
+        private const string WELCOME = "Welcome to your new adventure!";
         private const string RESUME = "Would you like to continue your previous adventure?";
         private const string MISUNDERSTOOD = "Sorry, I didn't understand your response.";
         private const string GOODBYE = "Good bye.";
@@ -152,7 +153,8 @@ namespace AdventureBot.Alexa {
 
                     // kick off the adventure!
                     player.Status = GamePlayerStatus.InProgress;
-                    responses = game.TryDo(player, GameCommandType.Restart);
+                    responses = new [] { new GameResponseSay(WELCOME) }
+                        .Concat(game.TryDo(player, GameCommandType.Restart));
                     reprompt = game.TryDo(player, GameCommandType.Help);
                     break;
                 case GamePlayerStatus.Restored:

@@ -48,6 +48,11 @@ using Newtonsoft.Json.Linq;
 namespace AdventureBot.Alexa {
     public class Function {
 
+        //--- Constants ---
+        private const string RESUME = "Would you like to continue your previous adventure?";
+        private const string MISUNDERSTOOD = "Sorry, I didn't understand your response.";
+        private const string GOODBYE = "Good bye.";
+
         //--- Class Methods ---
         private static string ReadTextFromS3(AmazonS3Client s3Client, string bucket, string filepath) {
             try {
@@ -153,7 +158,7 @@ namespace AdventureBot.Alexa {
                 case GamePlayerStatus.Restored:
 
                     // ask player if the game session should be restored from the database
-                    responses = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
+                    responses = new[] { new GameResponseSay(RESUME) };
                     reprompt = responses;
                     break;
                 }
@@ -226,8 +231,8 @@ namespace AdventureBot.Alexa {
                         default:
 
                             // unexpected response; ask again
-                            responses = new[] { new GameResponseSay("Sorry, I didn't understand your response. Would you like to continue your previous adventure?") };
-                            reprompt = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
+                            responses = new[] { new GameResponseSay(MISUNDERSTOOD + " " + RESUME) };
+                            reprompt = new[] { new GameResponseSay(RESUME) };
                             break;
                         }
                     } else {
@@ -247,8 +252,8 @@ namespace AdventureBot.Alexa {
                             LambdaLogger.Log("*** WARNING: intent not recognized\n");
 
                             // unexpected response; ask again
-                            responses = new[] { new GameResponseSay("Sorry, I didn't understand your response. Would you like to continue your previous adventure?") };
-                            reprompt = new[] { new GameResponseSay("Would you like to continue your previous adventure?") };
+                            responses = new[] { new GameResponseSay(MISUNDERSTOOD + " " + RESUME) };
+                            reprompt = new[] { new GameResponseSay(RESUME) };
                             break;
                         }
                     }
@@ -306,18 +311,18 @@ namespace AdventureBot.Alexa {
                     ssml.Add(new XElement("audio", new XAttribute("src", play.Url)));
                     break;
                 case GameResponseNotUnderstood _:
-                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
+                    ssml.Add(new XElement("p", new XText(MISUNDERSTOOD)));
                     break;
                 case GameResponseBye _:
-                    ssml.Add(new XElement("p", new XText("Good bye.")));
+                    ssml.Add(new XElement("p", new XText(GOODBYE)));
                     break;
                 case null:
                     LambdaLogger.Log($"ERROR: null response\n");
-                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
+                    ssml.Add(new XElement("p", new XText(MISUNDERSTOOD)));
                     break;
                 default:
                     LambdaLogger.Log($"ERROR: unknown response: {response.GetType().Name}\n");
-                    ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
+                    ssml.Add(new XElement("p", new XText(MISUNDERSTOOD)));
                     break;
                 }
             }

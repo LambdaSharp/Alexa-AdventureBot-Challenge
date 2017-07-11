@@ -242,7 +242,6 @@ namespace AdventureBot.Alexa {
                         case BuiltInIntent.Stop:
                         case BuiltInIntent.Cancel:
                             LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
-                            player.Status = GamePlayerStatus.InProgress;
                             responses = game.TryDo(player, GameCommandType.Quit);
                             break;
 
@@ -376,17 +375,19 @@ namespace AdventureBot.Alexa {
         }
 
         private Session StoreGamePlayer(Game game, GamePlayer player) {
-            if(game.Places.TryGetValue(player.PlaceId, out GamePlace place) && !place.Finished) {
-                LambdaLogger.Log("*** INFO: storing player in session table\n");
-                _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = player.RecordId },
-                    ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player, Formatting.None) }
-                }).Wait();
-            } else {
-                LambdaLogger.Log("*** INFO: deleting player from session table\n");
-                _dynamoClient.DeleteItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = player.RecordId }
-                }).Wait();
+            if(_tableName != null) {
+                if(game.Places.TryGetValue(player.PlaceId, out GamePlace place) && !place.Finished) {
+                    LambdaLogger.Log("*** INFO: storing player in session table\n");
+                    _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
+                        ["Id"] = new AttributeValue { S = player.RecordId },
+                        ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player, Formatting.None) }
+                    }).Wait();
+                } else {
+                    LambdaLogger.Log("*** INFO: deleting player from session table\n");
+                    _dynamoClient.DeleteItemAsync(_tableName, new Dictionary<string, AttributeValue> {
+                        ["Id"] = new AttributeValue { S = player.RecordId }
+                    }).Wait();
+                }
             }
             return new Session {
                 Attributes = new Dictionary<string, object> {

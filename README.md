@@ -165,6 +165,7 @@ The choice object associates a command with zero or more actions. The field name
 ### Actions
 The action object associates an action with an argument. The field name must be one of the recognized actions:
 
+* `"goto"`: Moves the player to a new place.
 * `"say"`: Says one or more sentences.
 * `"pause"`: Pause the output for a while.
 * `"play"`: Play an MP3 file.

@@ -49,10 +49,10 @@ namespace AdventureBot.Alexa {
     public class Function {
 
         //--- Constants ---
-        private const string WELCOME = "Welcome to your new adventure!";
-        private const string RESUME = "Would you like to continue your previous adventure?";
-        private const string MISUNDERSTOOD = "Sorry, I didn't understand your response.";
-        private const string GOODBYE = "Good bye.";
+        private const string PROMPT_WELCOME = "Welcome to your new adventure!";
+        private const string PROMPT_RESUME = "Would you like to continue your previous adventure?";
+        private const string PROMPT_MISUNDERSTOOD = "Sorry, I didn't understand your response.";
+        private const string PROMPT_GOODBYE = "Good bye.";
 
         //--- Class Methods ---
         private static string ReadTextFromS3(AmazonS3Client s3Client, string bucket, string filepath) {
@@ -74,6 +74,10 @@ namespace AdventureBot.Alexa {
         private static string UserIdToSessionRecordKey(string userId) {
             var md5 = System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(userId));
             return $"resume-{new Guid(md5):N}";
+        }
+
+        private static uint ToEpoch(DateTime date) {
+            return  (uint)date.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
         }
 
         //--- Fields ---
@@ -149,18 +153,17 @@ namespace AdventureBot.Alexa {
                     player.Status = GamePlayerStatus.New;
                     goto case GamePlayerStatus.New;
                 case GamePlayerStatus.New:
-                    player.Status = GamePlayerStatus.InProgress;
 
                     // kick off the adventure!
                     player.Status = GamePlayerStatus.InProgress;
-                    responses = new [] { new GameResponseSay(WELCOME) }
+                    responses = new [] { new GameResponseSay(PROMPT_WELCOME) }
                         .Concat(game.TryDo(player, GameCommandType.Restart));
                     reprompt = game.TryDo(player, GameCommandType.Help);
                     break;
                 case GamePlayerStatus.Restored:
 
                     // ask player if the game session should be restored from the database
-                    responses = new[] { new GameResponseSay(RESUME) };
+                    responses = new[] { new GameResponseSay(PROMPT_RESUME) };
                     reprompt = responses;
                     break;
                 }
@@ -233,8 +236,8 @@ namespace AdventureBot.Alexa {
                         default:
 
                             // unexpected response; ask again
-                            responses = new[] { new GameResponseSay(MISUNDERSTOOD + " " + RESUME) };
-                            reprompt = new[] { new GameResponseSay(RESUME) };
+                            responses = new[] { new GameResponseSay(PROMPT_MISUNDERSTOOD + " " + PROMPT_RESUME) };
+                            reprompt = new[] { new GameResponseSay(PROMPT_RESUME) };
                             break;
                         }
                     } else {
@@ -253,8 +256,8 @@ namespace AdventureBot.Alexa {
                             LambdaLogger.Log("*** WARNING: intent not recognized\n");
 
                             // unexpected response; ask again
-                            responses = new[] { new GameResponseSay(MISUNDERSTOOD + " " + RESUME) };
-                            reprompt = new[] { new GameResponseSay(RESUME) };
+                            responses = new[] { new GameResponseSay(PROMPT_MISUNDERSTOOD + " " + PROMPT_RESUME) };
+                            reprompt = new[] { new GameResponseSay(PROMPT_RESUME) };
                             break;
                         }
                     }
@@ -279,20 +282,39 @@ namespace AdventureBot.Alexa {
                 return ResponseBuilder.Empty();
             }
 
-            // send out notification if player reaches the end
-            if((_gameFinishedTopic != null) && game.Places.TryGetValue(player.PlaceId, out GamePlace place) && place.Finished) {
-                _snsClient.PublishAsync(_gameFinishedTopic, JsonConvert.SerializeObject(player, Formatting.None)).Wait();
+            // check if the player reached the end
+            if(game.Places[player.PlaceId].Finished) {
+                player.End = DateTime.UtcNow;
+
+                // send out notification when player reaches the end
+                if(_gameFinishedTopic != null) {
+                    LambdaLogger.Log("*** INFO: sending out player completion information\n");
+                    _snsClient.PublishAsync(_gameFinishedTopic, JsonConvert.SerializeObject(player, Formatting.None)).Wait();
+                }
+            }
+
+            // create/update player record so we can continue in a future session
+            if(_tableName != null) {
+                LambdaLogger.Log("*** INFO: storing player in session table\n");
+                _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
+                    ["Id"] = new AttributeValue { S = player.RecordId },
+                    ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player, Formatting.None) },
+                    ["Expire"] = new AttributeValue { N = ToEpoch(DateTime.UtcNow.AddDays(30)).ToString() }
+                }).Wait();
             }
 
             // respond with serialized player state
-            var session = StoreGamePlayer(game, player);
             if(reprompt != null) {
                 return ResponseBuilder.Ask(
                     ConvertToSpeech(responses),
                     new Reprompt {
                         OutputSpeech = ConvertToSpeech(reprompt)
                     },
-                    session
+                    new Session {
+                        Attributes = new Dictionary<string, object> {
+                            ["player"] = player
+                        }
+                    }
                 );
             }
             return ResponseBuilder.Tell(ConvertToSpeech(responses));
@@ -312,18 +334,18 @@ namespace AdventureBot.Alexa {
                     ssml.Add(new XElement("audio", new XAttribute("src", play.Url)));
                     break;
                 case GameResponseNotUnderstood _:
-                    ssml.Add(new XElement("p", new XText(MISUNDERSTOOD)));
+                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
                     break;
                 case GameResponseBye _:
-                    ssml.Add(new XElement("p", new XText(GOODBYE)));
+                    ssml.Add(new XElement("p", new XText(PROMPT_GOODBYE)));
                     break;
                 case null:
                     LambdaLogger.Log($"ERROR: null response\n");
-                    ssml.Add(new XElement("p", new XText(MISUNDERSTOOD)));
+                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
                     break;
                 default:
                     LambdaLogger.Log($"ERROR: unknown response: {response.GetType().Name}\n");
-                    ssml.Add(new XElement("p", new XText(MISUNDERSTOOD)));
+                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
                     break;
                 }
             }
@@ -345,9 +367,23 @@ namespace AdventureBot.Alexa {
                         ["Id"] = new AttributeValue { S = recordId }
                     }).Result;
                     if(record.IsItemSet) {
-                        LambdaLogger.Log("*** INFO: restoring player from session table\n");
+                        LambdaLogger.Log("*** INFO: restored player from session table\n");
                         player = JsonConvert.DeserializeObject<GamePlayer>(record.Item["State"].S);
                         player.Status = GamePlayerStatus.Restored;
+
+                        // check if the place the player was in still exists or if the player had reached an end state
+                        if(!game.Places.TryGetValue(player.PlaceId, out GamePlace place)) {
+                            LambdaLogger.Log($"*** WARNING: unable to find matching place for restored player from session table (value: '{player.PlaceId}')\n");
+                            LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+
+                            // reset player
+                            player = null;
+                        } else if(place.Finished) {
+                            LambdaLogger.Log("*** INFO: restored player had reached end place\n");
+
+                            // reset player
+                            player = null;
+                        }
                     }
                 }
             } else {
@@ -363,6 +399,8 @@ namespace AdventureBot.Alexa {
                     if(!game.Places.ContainsKey(player.PlaceId)) {
                         LambdaLogger.Log($"*** WARNING: unable to find matching place for restored player in session (value: '{player.PlaceId}')\n");
                         LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+
+                        // reset player
                         player = null;
                     }
                 }
@@ -374,28 +412,6 @@ namespace AdventureBot.Alexa {
                 player = new GamePlayer(recordId, Game.StartPlaceId);
             }
             return player;
-        }
-
-        private Session StoreGamePlayer(Game game, GamePlayer player) {
-            if(_tableName != null) {
-                if(game.Places.TryGetValue(player.PlaceId, out GamePlace place) && !place.Finished) {
-                    LambdaLogger.Log("*** INFO: storing player in session table\n");
-                    _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                        ["Id"] = new AttributeValue { S = player.RecordId },
-                        ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player, Formatting.None) }
-                    }).Wait();
-                } else {
-                    LambdaLogger.Log("*** INFO: deleting player from session table\n");
-                    _dynamoClient.DeleteItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                        ["Id"] = new AttributeValue { S = player.RecordId }
-                    }).Wait();
-                }
-            }
-            return new Session {
-                Attributes = new Dictionary<string, object> {
-                    ["player"] = player
-                }
-            };
         }
     }
 }

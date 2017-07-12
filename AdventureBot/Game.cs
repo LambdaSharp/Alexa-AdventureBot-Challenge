@@ -110,6 +110,11 @@ namespace AdventureBot {
                 break;
             case GameCommandType.Restart:
 
+                // update player statistics
+                ++player.Attempts;
+                player.Start = DateTime.UtcNow;
+                player.End = null;
+
                 // check if current place has custom instructions for handling a restart
                 if((choice == null) || !choice.Any(c => c.Key == GameActionType.Goto)) {
                     place = Places[Game.StartPlaceId];

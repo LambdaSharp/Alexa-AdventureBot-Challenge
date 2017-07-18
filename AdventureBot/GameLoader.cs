@@ -65,6 +65,11 @@ namespace AdventureBot {
                     if(!Enum.TryParse(choice, true, out GameCommandType command)) {
                         throw new GameLoaderException($"Illegal value for choice ({choice}) at {jsonChoice.Path}.");
                     }
+
+                    // parse choice actions
+
+                    // TODO (2017-07-11, bjorg): allow text commands in addition to plain strings
+
                     if(jsonChoice.Value is JArray array) {
                         var actions = array.Select(item => {
                             var property = ((JObject)item).Properties().First();

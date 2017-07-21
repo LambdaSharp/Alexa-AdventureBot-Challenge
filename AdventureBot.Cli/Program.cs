@@ -26,9 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using AdventureBot;
 
-namespace AventureBot.Cli {
+namespace AdventureBot.Cli {
 
     public class Program : IGameEngineDependencyProvider {
 

@@ -37,7 +37,7 @@ namespace AdventureBot {
         //--- Fields ---
         public string RecordId;
         public string CurrentPlaceId;
-        public GamePlayerStatus Status = GamePlayerStatus.New;
+        public GameStateStatus Status = GameStateStatus.New;
         public DateTime Start = DateTime.UtcNow;
         public DateTime? End = null;
         public int GameAttempts = 0;

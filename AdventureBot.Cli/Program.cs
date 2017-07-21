@@ -30,7 +30,7 @@ using AdventureBot;
 
 namespace AventureBot.Cli {
 
-    public class Program {
+    public class Program : IGameEngineDependencyProvider {
 
         //--- Class Methods ---
         public static void Main(string[] args) {
@@ -47,10 +47,10 @@ namespace AventureBot.Cli {
 
             // initialize the game from the adventure file
             Game game;
-            GamePlayer player;
+            GameState state;
             try {
                 game = GameLoader.LoadFrom(args[0]);
-                player = new GamePlayer("cli", Game.StartPlaceId);
+                state = new GameState("cli", Game.StartPlaceId);
             } catch(GameLoaderException e) {
                 Console.WriteLine($"ERROR: {e.Message}");
                 return;
@@ -59,76 +59,75 @@ namespace AventureBot.Cli {
                 Console.WriteLine(e);
                 return;
             }
+
+            // invoke game
+            var app = new Program();
+            GameEngine engine = new GameEngine(game, state, app);
+            app.GameLoop(engine);
+        }
+
+        private static void TypeLine(string text = "") {
+
+            // write each character with a random delay to give the text output a typewriter feel
+            var random = new Random();
+            foreach(var c in text) {
+                System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
+                Console.Write(c);
+            }
+            Console.WriteLine();
+        }
+
+        //--- Methods ---
+        private void GameLoop(GameEngine engine) {
             Console.Clear();
 
             // start the game loop
-            var responses = game.Do(player, GameCommandType.Restart);
+            engine.Do(GameCommandType.Restart);
             try {
                 while(true) {
-                    if(PlayResponses(responses)) {
-                        return;
-                    }
 
                     // prompt user input
                     Console.Write("> ");
                     var commandText = Console.ReadLine().Trim().ToLower();
                     if(!Enum.TryParse(commandText, true, out GameCommandType command)) {
-                        responses = new[] { new GameResponseNotUnderstood() };
+
+                        // TODO (2017-07-21, bjorg): need a way to invoke a 'command not understood' reaction
+                        // responses = new[] { new GameResponseNotUnderstood() };
                         continue;
                     }
 
                     // process user input
-                    responses = game.Do(player, command);
+                    engine.Do(command);
                 }
             } catch(Exception e) {
                 Console.Error.WriteLine(e);
             }
         }
 
-        private static bool PlayResponses(IEnumerable<AGameResponse> responses) {
-            var quit = false;
+        //--- IGameEngineDependencyProvider Members ---
+        void IGameEngineDependencyProvider.Say(string text) {
+            TypeLine(text);
+        }
 
-            // process each response
-            foreach(var response in responses) {
-                switch(response) {
-                case GameResponseSay say:
-                    TypeLine(say.Text);
-                    break;
-                case GameResponseDelay delay:
-                    System.Threading.Thread.Sleep(delay.Delay);
-                    break;
-                case GameResponsePlay play:
-                    Console.WriteLine($"({play.Url})");
-                    break;
-                case GameResponseNotUnderstood _:
-                    TypeLine("Sorry, I don't know what that means.");
-                    break;
-                case GameResponseBye _:
-                    quit = true;
-                    TypeLine("Good bye.");
-                    break;
-                case null:
-                    Console.WriteLine($"ERROR: null response");
-                    break;
-                default:
-                    Console.WriteLine($"ERROR: unknown response: {response.GetType().Name}");
-                    break;
-                }
-            }
+        void IGameEngineDependencyProvider.Delay(TimeSpan delay) {
+            System.Threading.Thread.Sleep(delay);
+        }
 
-            // return boolean indicating if one of the response was a good-bye message
-            return quit;
+        void IGameEngineDependencyProvider.Play(string url) {
+            Console.WriteLine($"({url})");
+        }
 
-            void TypeLine(string text = "") {
+        void IGameEngineDependencyProvider.NotUnderstood() {
+            TypeLine("Sorry, I don't know what that means.");
+        }
 
-                // write each character with a random delay to give the text output a typewriter feel
-                var random = new Random();
-                foreach(var c in text) {
-                    System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
-                    Console.Write(c);
-                }
-                Console.WriteLine();
-            }
+        void IGameEngineDependencyProvider.Bye() {
+            TypeLine("Good bye.");
+            System.Environment.Exit(0);
+        }
+
+        void IGameEngineDependencyProvider.Error(string description) {
+            throw new Exception(description);
         }
     }
 }

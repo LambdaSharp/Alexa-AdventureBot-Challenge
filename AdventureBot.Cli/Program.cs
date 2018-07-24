@@ -1,7 +1,7 @@
 ﻿/*
  * MIT License
  *
- * Copyright (c) 2017 Steve Bjorg
+ * Copyright (c) 2017-2018 Steve Bjorg
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -106,6 +106,10 @@ namespace AventureBot.Cli {
                 case GameResponseBye _:
                     quit = true;
                     TypeLine("Good bye.");
+                    break;
+                case GameResponseFinished _:
+
+                    // TODO: player is done with the adventure
                     break;
                 case null:
                     Console.WriteLine($"ERROR: null response");

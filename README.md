@@ -4,7 +4,7 @@ AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skill
 ### Pre-requisites
 The following tools and accounts are required to complete these instructions.
 
-* [Install .NET Core 1.x](https://www.microsoft.com/net/core)
+* [Install .NET Core 2.1](https://www.microsoft.com/net/core)
 * [Install AWS CLI](https://aws.amazon.com/cli/)
 * [Sign-up for an AWS account](https://aws.amazon.com/)
 * [Sign-up for an Amazon developer account](https://developer.amazon.com/)
@@ -211,5 +211,5 @@ Alexa compatible MP3 can be produced with the `ffmpeg` utility:
 This challenge was made possible by the excellent of Tim Heuer who wrote the outstanding [Alexa.NET](https://github.com/timheuer/alexa-skills-dotnet/) library!
 
 ### Copyright & License
-* Copyright (c) 2017 Steve Bjorg
+* Copyright (c) 2017-2018 Steve Bjorg
 * MIT License

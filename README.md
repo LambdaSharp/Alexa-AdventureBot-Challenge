@@ -1,4 +1,4 @@
-# λ# AdventureBot - June 2017 Team Hackathon Challenge
+# λ# Alexa AdventureBot Team Hackathon Challenge
 AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skills-kit) for powering voice-based adventures on Alexa-enabled devices. AdventureBot includes a game library, an AWS lambda function, a command line utility, and an Alexa Skill definition to get you going as quickly as possible.
 
 ### Pre-requisites

@@ -40,12 +40,13 @@ using Amazon.S3;
 using Amazon.SimpleNotificationService;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using MindTouch.LambdaSharp;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace AdventureBot.Alexa {
-    public class Function {
+    public class Function : ALambdaFunction<SkillRequest, SkillResponse> {
 
         //--- Class Methods ---
         private static string ReadTextFromS3(AmazonS3Client s3Client, string bucket, string filepath) {
@@ -61,32 +62,25 @@ namespace AdventureBot.Alexa {
 
 
         //--- Fields ---
-        private readonly AmazonS3Client _s3Client;
-        private readonly AmazonSimpleNotificationServiceClient _snsClient;
-        private readonly AmazonDynamoDBClient _dynamoClient;
-        private readonly string _adventureFileBucket;
-        private readonly string _adventureFilePath;
+        private AmazonS3Client _s3Client;
+        private AmazonSimpleNotificationServiceClient _snsClient;
+        private AmazonDynamoDBClient _dynamoClient;
+        private string _adventureFileBucket;
+        private string _adventureFilePath;
 
-        //--- Constructors ---
-        public Function() {
-
-            // read function settings
-            var adventureFile = System.Environment.GetEnvironmentVariable("adventure_file");
-            if(string.IsNullOrEmpty(adventureFile)) {
-                throw new ArgumentException("missing S3 url for adventure json file", "adventure_file");
-            }
-            var adventureFileUrl = new Uri(adventureFile);
-            _adventureFileBucket = adventureFileUrl.Host;
-            _adventureFilePath = adventureFileUrl.AbsolutePath.Trim('/');
+        //--- Methods ---
+        public override Task InitializeAsync(LambdaConfig config) {
+            _adventureFileBucket = config.ReadText("AdventureBucket");
+            _adventureFilePath = config.ReadText("AdventureFilePath");
 
             // initialize clients
             _s3Client = new AmazonS3Client();
             _snsClient = new AmazonSimpleNotificationServiceClient();
             _dynamoClient = new AmazonDynamoDBClient();
+            return Task.CompletedTask;
         }
 
-        //--- Methods ---
-        public SkillResponse FunctionHandler(SkillRequest skill, ILambdaContext context) {
+        public override async Task<SkillResponse> ProcessMessageAsync(SkillRequest skill, ILambdaContext context) {
 
             // load adventure from S3
             var game = GameLoader.Parse(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFilePath));

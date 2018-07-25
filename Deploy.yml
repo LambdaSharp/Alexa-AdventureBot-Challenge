@@ -1,0 +1,38 @@
+Version: "2018-07-04"
+
+Name: AdventureBot
+
+Parameters:
+
+  - Name: AdventureFilePath
+    Value: sample-adventure.json
+  
+  - Name: AdventureBucket
+    Resource:
+      Type: AWS::S3::Bucket
+      Allow: ReadWrite
+  
+  - Name: AdventureFinishedTopic
+    Resource:
+      Type: AWS::SNS::Topic
+      Allow: Publish
+
+  - Name: AdventureFiles
+    Package: assets/*.json
+    Destination:
+      Bucket: AdventureBucket
+      Prefix: Adventures/
+
+  - Name: SoundFiles
+    Package: assets/sounds/*.mp3
+    Destination:
+      Bucket: AdventureBucket
+      Prefix: Sounds/
+
+Functions:
+
+  - Name: Alexa
+    Memory: 128
+    Timeout: 30
+    Sources:
+      - Alexa: ""

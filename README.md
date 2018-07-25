@@ -54,23 +54,16 @@ The project uses by default the `lambdasharp` profile. Follow these steps to set
 2. Configure the profile with the AWS credentials you want to use
 3. **NOTE**: AWS Lambda function for Alexa Skills must be deployed in `us-east-1`
 
-### Create `LambdaSharp-AdventureBotAlexa` role for the lambda function
-The `LambdaSharp-AdventureBotAlexa` lambda function requires an IAM role to access CloudWatchLogs, S3, SNS, and DynamoDB. You can create the `LambdaSharp-AdventureBotAlexa` role via the [AWS Console](https://console.aws.amazon.com/iam/home) or use the executing [AWS CLI](https://aws.amazon.com/cli/) commands.
+### Deploy AdventureBot
+The AdventureBot code is packaged as a λ# deployment, which streamlines the creating and uploading of assets for serverless applications.
 
-```shell
-aws iam create-role --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --assume-role-policy-document file://assets/lambda-role-policy.json
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonSNSFullAccess
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-```
+1. Open a shell and switch to the git checkout folder
+2. Run the λ# tool to deploy AdventureBot: `lst deploy --profile lambdasharp --deployment test`
 
 ### Upload AdventureBot JSON file
 The AdventureBot lambda function reads the adventure definition from a JSON file that must be uploaded to S3. Follow these steps to create a new bucket and upload a sample adventure file.
 
-1. Create an S3 bucket or reuse an existing one (e.g. `my-adventurebot-bucket`)
-2. Create an `AdventureBot` folder
-3. Upload `assets/sample-adventure.json` file into the `AdventureBot` folder
+1. Upload `assets/sample-adventure.json` file to the AdventureBot S3 bucket using the console
 
 ### Publish the AdventureBot lambda function
 The AdventureBot lambda function needs to be compiled and published to AWS `us-east-1`. The default publishing settings are in `aws-lambda-tools-defaults.json` file and assume the `lambdasharp` profile. Once published, the lambda function needs to be configured to be ready for invocation by the Alexa Skill.

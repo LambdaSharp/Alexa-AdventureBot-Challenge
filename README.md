@@ -6,10 +6,11 @@ AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skill
 ### Pre-requisites
 The following tools and accounts are required to complete these instructions.
 
-* [Install .NET Core 2.1](https://www.microsoft.com/net/core)
+* [Install .NET Core 2.1](https://www.microsoft.com/net/download)
 * [Install AWS CLI](https://aws.amazon.com/cli/)
 * [Sign-up for an AWS account](https://aws.amazon.com/)
-* [Sign-up for an Amazon developer account](https://developer.amazon.com/)
+* [Sign-up for an Amazon developer account](https://developer.amazon.com/alexa)
+* [Install MindTouch LambdaSharp Tool](https://github.com/LambdaSharp/LambdaSharpTool)
 
 ### Running the AdventureBot command line app
 1. Restore solution packages: `dotnet restore`

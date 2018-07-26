@@ -60,18 +60,18 @@ namespace AdventureBot.Alexa {
             }
         }
 
-
         //--- Fields ---
         private AmazonS3Client _s3Client;
         private AmazonSimpleNotificationServiceClient _snsClient;
         private AmazonDynamoDBClient _dynamoClient;
         private string _adventureFileBucket;
-        private string _adventureFilePath;
+        private string _adventureFileKey;
 
         //--- Methods ---
         public override Task InitializeAsync(LambdaConfig config) {
-            _adventureFileBucket = config.ReadText("AdventureBucket");
-            _adventureFilePath = config.ReadText("AdventureFilePath");
+            var adventureFiles = new Uri(config.ReadText("AdventureFiles"));
+            _adventureFileBucket = adventureFiles.Host;
+            _adventureFileKey = Path.Combine(adventureFiles.AbsolutePath, config.ReadText("AdventureFile")).TrimStart('/');
 
             // initialize clients
             _s3Client = new AmazonS3Client();
@@ -83,7 +83,7 @@ namespace AdventureBot.Alexa {
         public override async Task<SkillResponse> ProcessMessageAsync(SkillRequest skill, ILambdaContext context) {
 
             // load adventure from S3
-            var game = GameLoader.Parse(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFilePath));
+            var game = GameLoader.Parse(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFileKey));
 
             // restore player object from session
             GamePlayer player;

@@ -66,12 +66,27 @@ namespace AdventureBot.Alexa {
         private AmazonDynamoDBClient _dynamoClient;
         private string _adventureFileBucket;
         private string _adventureFileKey;
+        private string _adventureSoundFilesPublicUrl;
+        private string _adventurePlayerTable;
+        private string _adventurePlayerFinishedTopic;
 
         //--- Methods ---
         public override Task InitializeAsync(LambdaConfig config) {
+
+            // read location of adventure files
             var adventureFiles = new Uri(config.ReadText("AdventureFiles"));
             _adventureFileBucket = adventureFiles.Host;
-            _adventureFileKey = Path.Combine(adventureFiles.AbsolutePath, config.ReadText("AdventureFile")).TrimStart('/');
+            _adventureFileKey = adventureFiles.AbsolutePath.TrimStart('/') + config.ReadText("AdventureFile");
+
+            // read location of sound files
+            var adventureSoundFiles = new Uri(config.ReadText("SoundFiles"));
+            _adventureSoundFilesPublicUrl = $"https://{adventureSoundFiles.Host}.s3.amazonaws.com{adventureSoundFiles.AbsolutePath}";
+
+            // read topic ARN for sending notifications
+            _adventurePlayerFinishedTopic = config.ReadText("AdventureFinishedTopic");
+
+            // read DynamoDB name for player state
+            _adventurePlayerTable = config.ReadText("PlayerTable");
 
             // initialize clients
             _s3Client = new AmazonS3Client();
@@ -92,7 +107,7 @@ namespace AdventureBot.Alexa {
                 // TODO: can we restore the player from DynamoDB?
                 player = new GamePlayer(Game.StartPlaceId);
             } else {
-                player = SessionLoader.Deserialize(game, skill.Session);
+                player = DeserializeSession(game, skill.Session);
             }
 
             // decode skill request
@@ -102,15 +117,15 @@ namespace AdventureBot.Alexa {
 
             // skill was activated without an intent
             case LaunchRequest launch:
-                LambdaLogger.Log($"*** INFO: launch\n");
-                responses = game.TryDo(player, GameCommandType.Restart);
-                reprompt = game.TryDo(player, GameCommandType.Help);
+                LogInfo("launch");
+                responses = TryDo(game, player, GameCommandType.Restart);
+                reprompt = TryDo(game, player, GameCommandType.Help);
                 return ResponseBuilder.Ask(
                     ConvertToSpeech(responses),
                     new Reprompt {
                         OutputSpeech = ConvertToSpeech(reprompt)
                     },
-                    SessionLoader.Serialize(game, player)
+                    SerializeSession(game, player)
                 );
 
             // skill was activated with an intent
@@ -118,30 +133,30 @@ namespace AdventureBot.Alexa {
 
                 // check if the intent is an adventure intent
                 if(Enum.TryParse(intent.Intent.Name, true, out GameCommandType command)) {
-                    LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
-                    responses = game.TryDo(player, command);
-                    reprompt = game.TryDo(player, GameCommandType.Help);
+                    LogInfo($"adventure intent ({intent.Intent.Name})");
+                    responses = TryDo(game, player, command);
+                    reprompt = TryDo(game, player, GameCommandType.Help);
                 } else {
                     switch(intent.Intent.Name) {
 
                     // built-in intents
                     case BuiltInIntent.Help:
-                        LambdaLogger.Log($"*** INFO: built-in help intent ({intent.Intent.Name})\n");
-                        responses = game.TryDo(player, GameCommandType.Help);
-                        reprompt = game.TryDo(player, GameCommandType.Help);
+                        LogInfo($"built-in help intent ({intent.Intent.Name})");
+                        responses = TryDo(game, player, GameCommandType.Help);
+                        reprompt = TryDo(game, player, GameCommandType.Help);
                         break;
 
                     case BuiltInIntent.Stop:
                     case BuiltInIntent.Cancel:
-                        LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
-                        responses = game.TryDo(player, GameCommandType.Quit);
+                        LogInfo($"built-in stop/cancel intent ({intent.Intent.Name})");
+                        responses = TryDo(game, player, GameCommandType.Quit);
                         break;
 
                     // unknown & unsupported intents
                     default:
-                        LambdaLogger.Log("*** WARNING: intent not recognized\n");
+                        LogWarn("intent not recognized");
                         responses = new[] { new GameResponseNotUnderstood() };
-                        reprompt = game.TryDo(player, GameCommandType.Help);
+                        reprompt = TryDo(game, player, GameCommandType.Help);
                         break;
                     }
                 }
@@ -153,25 +168,24 @@ namespace AdventureBot.Alexa {
                         new Reprompt {
                             OutputSpeech = ConvertToSpeech(reprompt)
                         },
-                        SessionLoader.Serialize(game, player)
+                        SerializeSession(game, player)
                     );
                 }
                 return ResponseBuilder.Tell(ConvertToSpeech(responses));
 
             // skill session ended (no response expected)
             case SessionEndedRequest ended:
-                LambdaLogger.Log("*** INFO: session ended\n");
+                LogInfo("session ended");
                 return ResponseBuilder.Empty();
 
             // exception reported on previous response (no response expected)
             case SystemExceptionRequest error:
-                LambdaLogger.Log("*** INFO: system exception\n");
-                LambdaLogger.Log($"*** EXCEPTION: skill request: {JsonConvert.SerializeObject(skill)}\n");
+                LogWarn($"system exception for\n{JsonConvert.SerializeObject(error)}");
                 return ResponseBuilder.Empty();
 
             // unknown skill received (no response expected)
             default:
-                LambdaLogger.Log($"*** WARNING: unrecognized skill request: {JsonConvert.SerializeObject(skill)}\n");
+                LogWarn($"unrecognized skill request: {JsonConvert.SerializeObject(skill)}");
                 return ResponseBuilder.Empty();
             }
         }
@@ -187,7 +201,7 @@ namespace AdventureBot.Alexa {
                     ssml.Add(new XElement("break", new XAttribute("time", (int)delay.Delay.TotalMilliseconds + "ms")));
                     break;
                 case GameResponsePlay play:
-                    ssml.Add(new XElement("audio", new XAttribute("src", play.Url)));
+                    ssml.Add(new XElement("audio", new XAttribute("src", _adventureSoundFilesPublicUrl + play.FileName)));
                     break;
                 case GameResponseNotUnderstood _:
                     ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
@@ -200,11 +214,11 @@ namespace AdventureBot.Alexa {
                     // TODO: player is done with the adventure
                     break;
                 case null:
-                    LambdaLogger.Log($"ERROR: null response\n");
+                    LogWarn($"null response");
                     ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
                     break;
                 default:
-                    LambdaLogger.Log($"ERROR: unknown response: {response.GetType().Name}\n");
+                    LogWarn($"unknown response: {response.GetType().Name}");
                     ssml.Add(new XElement("p", new XText("Sorry, I don't know what that means.")));
                     break;
                 }
@@ -212,6 +226,51 @@ namespace AdventureBot.Alexa {
             return new SsmlOutputSpeech {
                 Ssml = ssml.ToString(SaveOptions.DisableFormatting)
             };
+        }
+
+        public IEnumerable<AGameResponse> TryDo(Game game, GamePlayer player, GameCommandType command) {
+            try {
+                return game.Do(player, command);
+            } catch(GameException e) {
+                LogError(e, $"a game exception occurred");
+                return new[] { new GameResponseSay("") };
+            } catch(Exception e) {
+                LogError(e, $"a general exception occurred");
+                return new[] { new GameResponseSay("Oops, something went wrong. Please try again.") };
+            }
+        }
+
+        public Session SerializeSession(Game game, GamePlayer player) {
+
+            // return a new session object with the serialized player information
+            return new Session {
+                Attributes = new Dictionary<string, object> {
+                    ["player"] = player
+                }
+            };
+        }
+
+        public GamePlayer DeserializeSession(Game game, Session session) {
+
+            // check if the session is new and return a new player if so
+            if(session.New) {
+                LogInfo("new player session started");
+                return new GamePlayer(Game.StartPlaceId);
+            }
+
+            // attempt to deserialize the player information
+            if(!session.Attributes.TryGetValue("player", out object playerStateValue) || !(playerStateValue is JObject playerState)) {
+                LogWarn($"unable to find player state in session (type: {playerStateValue?.GetType().Name})\n{JsonConvert.SerializeObject(session)}");
+                return new GamePlayer(Game.StartPlaceId);
+            }
+            var player = playerState.ToObject<GamePlayer>();
+
+            // validate the game still has a matching place for the player
+            if(!game.Places.ContainsKey(player.PlaceId)) {
+                LogWarn($"unable to find matching place for restored player in session (value: '{player.PlaceId}')\n{JsonConvert.SerializeObject(session)}");
+                return new GamePlayer(Game.StartPlaceId);
+            }
+            return player;
         }
     }
 }

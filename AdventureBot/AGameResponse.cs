@@ -35,7 +35,7 @@ namespace AdventureBot {
 
         //--- Constructors ---
         public GameResponseSay(string text) {
-            Text = text;
+            Text = text ?? throw new ArgumentNullException(nameof(text));
         }
     }
 
@@ -53,11 +53,11 @@ namespace AdventureBot {
     public class GameResponsePlay : AGameResponse {
 
         //--- Fields ---
-        public readonly string Url;
+        public readonly string FileName;
 
         //--- Constructors ---
-        public GameResponsePlay(string url) {
-            Url = url;
+        public GameResponsePlay(string fileName) {
+            FileName = fileName ?? throw new ArgumentNullException(nameof(fileName));
         }
     }
 

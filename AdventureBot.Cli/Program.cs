@@ -98,7 +98,7 @@ namespace AventureBot.Cli {
                     System.Threading.Thread.Sleep(delay.Delay);
                     break;
                 case GameResponsePlay play:
-                    Console.WriteLine($"({play.Url})");
+                    Console.WriteLine($"({play.FileName})");
                     break;
                 case GameResponseNotUnderstood _:
                     TypeLine("Sorry, I don't know what that means.");

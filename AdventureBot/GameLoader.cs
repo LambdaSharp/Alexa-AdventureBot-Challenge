@@ -28,6 +28,8 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using YamlDotNet.RepresentationModel;
+using YamlDotNet.Serialization;
 
 namespace AdventureBot {
 
@@ -42,10 +44,31 @@ namespace AdventureBot {
         //--- Class Methods ---
         public static Game LoadFrom(string filepath) {
             var source = File.ReadAllText(filepath);
-            return Parse(source);
+            switch(Path.GetExtension(filepath)) {
+            case ".json":
+                return ParseJson(source);
+            case ".yaml":
+            case ".yml":
+                return ParseYaml(source);
+            default:
+                throw new Exception();
+            }
         }
 
-        public static Game Parse(string source) {
+        public static Game ParseYaml(string source) {
+            using(var reader = new StringReader(source)) {
+                var yaml = new DeserializerBuilder()
+                    .Build()
+                    .Deserialize(reader);
+                var serializer = new SerializerBuilder()
+                    .JsonCompatible()
+                    .Build();
+                var jsonText = serializer.Serialize(yaml);
+                return ParseJson(jsonText);
+            }
+        }
+
+        public static Game ParseJson(string source) {
             var jsonGame = JsonConvert.DeserializeObject<JObject>(source);
             var places = new Dictionary<string, GamePlace>();
             foreach(var jsonPlace in GetObject(jsonGame, "places")?.Properties() ?? Enumerable.Empty<JProperty>()) {

@@ -98,7 +98,18 @@ namespace AdventureBot.Alexa {
         public override async Task<SkillResponse> ProcessMessageAsync(SkillRequest skill, ILambdaContext context) {
 
             // load adventure from S3
-            var game = GameLoader.Parse(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFileKey));
+            Game game = null;
+            switch(Path.GetExtension(_adventureFileKey)) {
+            case ".json":
+                game = GameLoader.ParseJson(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFileKey));
+                break;
+            case ".yaml":
+            case ".yml":
+                game = GameLoader.ParseYaml(ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFileKey));
+                break;
+            case string extension:
+                throw new Exception($"unsupported file extension: {extension}");
+            }
 
             // restore player object from session
             GamePlayer player;

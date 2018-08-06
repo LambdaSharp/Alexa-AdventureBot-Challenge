@@ -27,6 +27,15 @@ using System.Collections.Generic;
 namespace AdventureBot {
 
     public enum GameCommandType {
+        One = 1,
+        Two,
+        Three,
+        Four,
+        Five,
+        Six,
+        Seven,
+        Eight,
+        Nine,
         OptionOne = 1,
         OptionTwo,
         OptionThree,

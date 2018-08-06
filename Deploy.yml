@@ -8,7 +8,7 @@ Parameters:
 
   - Name: AdventureFile
     Description: Name of the adventure file to use
-    Value: my-demo-adventure.json
+    Value: my-demo-adventure.yaml
   
   - Name: AdventureBucket
     Description: S3 Bucket for storing adventure assets
@@ -24,7 +24,7 @@ Parameters:
 
   - Name: AdventureFiles
     Description: Package of all adventures files to be uploaded to S3 bucket
-    Package: assets/*.json
+    Package: assets/adventures/
     Destination:
       Bucket: AdventureBucket
       Prefix: Adventures/

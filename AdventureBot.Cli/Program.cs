@@ -59,7 +59,6 @@ namespace AdventureBot.Cli {
                 Console.WriteLine(e);
                 return;
             }
-            Console.Clear();
 
             // start the game loop
             var responses = game.Do(player, GameCommandType.Restart);

@@ -78,7 +78,6 @@ namespace AdventureBot.Cli {
 
         //--- Methods ---
         private void GameLoop(GameEngine engine) {
-            Console.Clear();
 
             // start the game loop
             engine.Do(GameCommandType.Restart);

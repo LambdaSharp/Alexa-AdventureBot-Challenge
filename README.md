@@ -1,13 +1,16 @@
-# λ# AdventureBot - June 2017 Team Hackathon Challenge
+![Alexa-AdventureBot](assets/images/Alexa-AdventureBot.png)
+
+# λ# Alexa AdventureBot Team Hackathon Challenge
 AdventureBot is an [Amazon Alexa Skill](https://developer.amazon.com/alexa-skills-kit) for powering voice-based adventures on Alexa-enabled devices. AdventureBot includes a game library, an AWS lambda function, a command line utility, and an Alexa Skill definition to get you going as quickly as possible.
 
 ### Pre-requisites
 The following tools and accounts are required to complete these instructions.
 
-* [Install .NET Core 1.x](https://www.microsoft.com/net/core)
+* [Install .NET Core 2.1](https://www.microsoft.com/net/download)
 * [Install AWS CLI](https://aws.amazon.com/cli/)
 * [Sign-up for an AWS account](https://aws.amazon.com/)
-* [Sign-up for an Amazon developer account](https://developer.amazon.com/)
+* [Sign-up for an Amazon developer account](https://developer.amazon.com/alexa)
+* [Install MindTouch LambdaSharp Tool](https://github.com/LambdaSharp/LambdaSharpTool)
 
 ### Running the AdventureBot command line app
 1. Restore solution packages: `dotnet restore`
@@ -54,23 +57,16 @@ The project uses by default the `lambdasharp` profile. Follow these steps to set
 2. Configure the profile with the AWS credentials you want to use
 3. **NOTE**: AWS Lambda function for Alexa Skills must be deployed in `us-east-1`
 
-### Create `LambdaSharp-AdventureBotAlexa` role for the lambda function
-The `LambdaSharp-AdventureBotAlexa` lambda function requires an IAM role to access CloudWatchLogs, S3, SNS, and DynamoDB. You can create the `LambdaSharp-AdventureBotAlexa` role via the [AWS Console](https://console.aws.amazon.com/iam/home) or use the executing [AWS CLI](https://aws.amazon.com/cli/) commands.
+### Deploy AdventureBot
+The AdventureBot code is packaged as a λ# deployment, which streamlines the creating and uploading of assets for serverless applications.
 
-```shell
-aws iam create-role --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --assume-role-policy-document file://assets/lambda-role-policy.json
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonSNSFullAccess
-aws iam attach-role-policy --profile lambdasharp --role-name LambdaSharp-AdventureBotAlexa --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-```
+1. Open a shell and switch to the git checkout folder
+2. Run the λ# tool to deploy AdventureBot: `lst deploy --profile lambdasharp --deployment test`
 
 ### Upload AdventureBot JSON file
 The AdventureBot lambda function reads the adventure definition from a JSON file that must be uploaded to S3. Follow these steps to create a new bucket and upload a sample adventure file.
 
-1. Create an S3 bucket or reuse an existing one (e.g. `my-adventurebot-bucket`)
-2. Create an `AdventureBot` folder
-3. Upload `assets/sample-adventure.json` file into the `AdventureBot` folder
+1. Upload `assets/sample-adventure.json` file to the AdventureBot S3 bucket using the console
 
 ### Publish the AdventureBot lambda function
 The AdventureBot lambda function needs to be compiled and published to AWS `us-east-1`. The default publishing settings are in `aws-lambda-tools-defaults.json` file and assume the `lambdasharp` profile. Once published, the lambda function needs to be configured to be ready for invocation by the Alexa Skill.
@@ -124,7 +120,7 @@ The main object has only one field called `"places"`.
 
 * `"places"`: Map of place IDs to place objects. This map must contain a place called `"start"`.
 
-```json
+```
 {
     "places": { ... }
 }
@@ -138,7 +134,7 @@ The place object has multiple fields. All of them are required.
 * `"finished"`: (optional) Boolean indicating that the place marks the end of an adventure. The value is `false` by default.
 * `"choices"`: Map of choices to actions the player can make.
 
-```json
+```
 {
     "description": "You are in a room.",
     "instructions": "To go North, say 1.",
@@ -155,7 +151,7 @@ The choice object associates a command with zero or more actions. The field name
 * `"restart"`
 * `"quit"`
 
-```json
+```
 {
     "yes": [ ... ],
     "no": [ ... ]
@@ -165,7 +161,6 @@ The choice object associates a command with zero or more actions. The field name
 ### Actions
 The action object associates an action with an argument. The field name must be one of the recognized actions:
 
-* `"goto"`: Moves the player to a new place.
 * `"say"`: Says one or more sentences.
 * `"pause"`: Pause the output for a while.
 * `"play"`: Play an MP3 file.
@@ -173,7 +168,7 @@ The action object associates an action with an argument. The field name must be 
 #### Say Action
 The say action converts text into speech.
 
-```json
+```
 {
     "say": [ "You open the door." ]
 }
@@ -182,7 +177,7 @@ The say action converts text into speech.
 #### Pause Action
 The pause action is delays further speech for the specified duration in seconds.
 
-```json
+```
 {
     "pause": [ 0.5 ]
 }
@@ -202,7 +197,7 @@ A good source of free samples can be found at [SoundEffects+](https://www.sounde
 Alexa compatible MP3 can be produced with the `ffmpeg` utility:
 `ffmpeg -i <source-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <destination-file>`
 
-```json
+```
 {
     "play": [ "https://example.org/door-close.mp3" ]
 }
@@ -212,5 +207,5 @@ Alexa compatible MP3 can be produced with the `ffmpeg` utility:
 This challenge was made possible by the excellent of Tim Heuer who wrote the outstanding [Alexa.NET](https://github.com/timheuer/alexa-skills-dotnet/) library!
 
 ### Copyright & License
-* Copyright (c) 2017 Steve Bjorg
+* Copyright (c) 2017-2018 Steve Bjorg
 * MIT License

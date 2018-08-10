@@ -39,6 +39,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Lambda.Core;
 using Amazon.S3;
 using Amazon.SimpleNotificationService;
+using MindTouch.LambdaSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -46,7 +47,7 @@ using Newtonsoft.Json.Linq;
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace AdventureBot.Alexa {
-    public class Function : IGameEngineDependencyProvider {
+    public class Function : ALambdaFunction<SkillRequest, SkillResponse>, IGameEngineDependencyProvider {
 
         //--- Constants ---
         private const string PROMPT_WELCOME = "Welcome to your new adventure!";
@@ -87,38 +88,45 @@ namespace AdventureBot.Alexa {
         }
 
         //--- Fields ---
-        private readonly AmazonS3Client _s3Client;
-        private readonly AmazonSimpleNotificationServiceClient _snsClient;
-        private readonly AmazonDynamoDBClient _dynamoClient;
-        private readonly string _adventureFileBucket;
-        private readonly string _adventureFilePath;
-        private readonly string _tableName;
-        private readonly string _gameFinishedTopic;
+        private AmazonS3Client _s3Client;
+        private AmazonSimpleNotificationServiceClient _snsClient;
+        private AmazonDynamoDBClient _dynamoClient;
+        private string _adventureFileBucket;
+        private string _adventureFileKey;
+        private string _adventureSoundFilesPublicUrl;
+        private string _adventurePlayerTable;
+        private string _adventurePlayerFinishedTopic;
         private  XElement _ssml;
 
-        //--- Constructors ---
-        public Function() {
-
-            // read function settings
-            var adventureFile = System.Environment.GetEnvironmentVariable("adventure_file");
-            if(Uri.TryCreate(adventureFile, UriKind.Absolute, out Uri adventureFileUrl)) {
-                _adventureFileBucket = adventureFileUrl.Host;
-                _adventureFilePath = adventureFileUrl.AbsolutePath.Trim('/');
-            }
-            _tableName = System.Environment.GetEnvironmentVariable("sessions_table_name");
-            _gameFinishedTopic = System.Environment.GetEnvironmentVariable("game_finished_topic");
+        //--- Methods ---
+        public override Task InitializeAsync(LambdaConfig config) {
 
             // initialize clients
             _s3Client = new AmazonS3Client();
             _snsClient = new AmazonSimpleNotificationServiceClient();
             _dynamoClient = new AmazonDynamoDBClient();
+
+            // read location of adventure files
+            var adventureFiles = new Uri(config.ReadText("AdventureFiles"));
+            _adventureFileBucket = adventureFiles.Host;
+            _adventureFileKey = adventureFiles.AbsolutePath.TrimStart('/') + config.ReadText("AdventureFile");
+
+            // read location of sound files
+            var adventureSoundFiles = new Uri(config.ReadText("SoundFiles"));
+            _adventureSoundFilesPublicUrl = $"https://{adventureSoundFiles.Host}.s3.amazonaws.com{adventureSoundFiles.AbsolutePath}";
+
+            // read topic ARN for sending notifications
+            _adventurePlayerFinishedTopic = config.ReadText("AdventureFinishedTopic");
+
+            // read DynamoDB name for player state
+            _adventurePlayerTable = config.ReadText("PlayerTable");
+            return Task.CompletedTask;
         }
 
-        //--- Methods ---
-        public SkillResponse FunctionHandler(SkillRequest skill, ILambdaContext context) {
+        public override async Task<SkillResponse> ProcessMessageAsync(SkillRequest skill, ILambdaContext context) {
 
             // validate configuration
-            var source = ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFilePath);
+            var source = ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFileKey);
             if(source == null) {
                 return ResponseBuilder.Tell(new PlainTextOutputSpeech {
                     Text = "There was an error loading the adventure file. " +
@@ -129,7 +137,7 @@ namespace AdventureBot.Alexa {
             // load adventure from S3
             Game game;
             try {
-                game = GameLoader.Parse(source);
+                game = GameLoader.Parse(source, Path.GetExtension(_adventureFileKey));
             } catch(Exception e) {
                 Log($"*** EXCEPTION: {e}");
                 return ResponseBuilder.Tell(new PlainTextOutputSpeech {
@@ -139,7 +147,7 @@ namespace AdventureBot.Alexa {
             }
 
             // restore player object from session
-            var state = RestoreGameState(game, skill.Session);
+            var state = await RestoreGameState(game, skill.Session);
             Log($"*** INFO: player status: {state.Status}");
 
             // decode skill request
@@ -310,20 +318,20 @@ namespace AdventureBot.Alexa {
                 state.End = DateTime.UtcNow;
 
                 // send out notification when player reaches the end
-                if(_gameFinishedTopic != null) {
+                if(_adventurePlayerFinishedTopic != null) {
                     Log("*** INFO: sending out player completion information");
-                    _snsClient.PublishAsync(_gameFinishedTopic, JsonConvert.SerializeObject(state, Formatting.None)).Wait();
+                    await _snsClient.PublishAsync(_adventurePlayerFinishedTopic, JsonConvert.SerializeObject(state, Formatting.None));
                 }
             }
 
             // create/update player record so we can continue in a future session
-            if(_tableName != null) {
+            if(_adventurePlayerTable != null) {
                 Log("*** INFO: storing player in session table");
-                _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
+                await _dynamoClient.PutItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
                     ["Id"] = new AttributeValue { S = state.RecordId },
                     ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(state, Formatting.None) },
                     ["Expire"] = new AttributeValue { N = ToEpoch(DateTime.UtcNow.AddDays(30)).ToString() }
-                }).Wait();
+                });
             }
 
             // respond with serialized player state
@@ -343,18 +351,18 @@ namespace AdventureBot.Alexa {
             return ResponseBuilder.Tell(response);
         }
 
-        private GameState RestoreGameState(Game game, Session session) {
+        private async Task<GameState> RestoreGameState(Game game, Session session) {
             var recordId = UserIdToSessionRecordKey(session.User.UserId);
             GameState state = null;
             if(session.New) {
 
                 // check if the player can be restored from the session table
-                if(_tableName != null) {
+                if(_adventurePlayerTable != null) {
 
                     // check if a session can be restored from the database
-                    var record = _dynamoClient.GetItemAsync(_tableName, new Dictionary<string, AttributeValue> {
+                    var record = await _dynamoClient.GetItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
                         ["Id"] = new AttributeValue { S = recordId }
-                    }).Result;
+                    });
                     if(record.IsItemSet) {
                         Log("*** INFO: restored player from session table");
                         state = JsonConvert.DeserializeObject<GameState>(record.Item["State"].S);
@@ -430,8 +438,8 @@ namespace AdventureBot.Alexa {
             _ssml.Add(new XElement("break", new XAttribute("time", (int)delay.TotalMilliseconds + "ms")));
         }
 
-        void IGameEngineDependencyProvider.Play(string url) {
-            _ssml.Add(new XElement("audio", new XAttribute("src", url)));
+        void IGameEngineDependencyProvider.Play(string name) {
+            _ssml.Add(new XElement("audio", new XAttribute("src", _adventureSoundFilesPublicUrl + name)));
         }
 
         void IGameEngineDependencyProvider.NotUnderstood() {

@@ -7,18 +7,18 @@
             "choices": {
                 "1": [
                     { "say": "You push the blue button." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/briefcase-latch-lock-07.mp3" },
+                    { "play": "Briefcase-Latch-Lock.mp3" },
                     { "goto": "room1-poison" }
                 ],
                 "2": [
                     { "say": "You push the red button." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/briefcase-latch-lock-07.mp3" },
+                    { "play": "Briefcase-Latch-Lock.mp3" },
                     { "say": "You hear a grinding noise beyond the door." },
                     { "goto": "room1-red-pushed" }
                 ],
                 "3": [
                     { "say": "You walk towards the door and open it." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/door-creaking-02.mp3" },
+                    { "play": "Door-Creaking.mp3" },
                     { "goto": "room2" }
                 ]
             }
@@ -30,18 +30,18 @@
             "choices": {
                 "1": [
                     { "say": "You push the blue button." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/briefcase-latch-lock-07.mp3" },
+                    { "play": "Briefcase-Latch-Lock.mp3" },
                     { "goto": "room1-poison" }
                 ],
                 "2": [
                     { "say": "You push the red button." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/briefcase-latch-lock-07.mp3" },
+                    { "play": "Briefcase-Latch-Lock.mp3" },
                     { "say": "You hear a grinding noise beyond the door." },
                     { "goto": "room1-red-pushed" }
                 ],
                 "3": [
                     { "say": "You walk towards the door and open it." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/door-creaking-02.mp3" },
+                    { "play": "Door-Creaking.mp3" },
                     { "goto": "room2" }
                 ]
             }
@@ -53,18 +53,18 @@
             "choices": {
                 "1": [
                     { "say": "You push the blue button." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/briefcase-latch-lock-07.mp3" },
+                    { "play": "Briefcase-Latch-Lock.mp3" },
                     { "goto": "room1-poison" }
                 ],
                 "2": [
                     { "say": "You push the red button again." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/briefcase-latch-lock-07.mp3" },
+                    { "play": "Briefcase-Latch-Lock.mp3" },
                     { "say": "You hear nothing this time." },
                     { "goto": "room1-red-pushed" }
                 ],
                 "3": [
                     { "say": "You walk towards the door and open it." },
-                    // { "play": "https://s3.amazonaws.com/YOUR-S3-BUCKET/AdventureBot/Sounds/door-creaking-02.mp3" },
+                    { "play": "Door-Creaking.mp3" },
                     { "goto": "room2-red-pushed" }
                 ]
             }

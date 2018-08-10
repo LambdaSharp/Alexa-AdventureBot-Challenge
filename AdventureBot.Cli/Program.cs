@@ -111,8 +111,8 @@ namespace AdventureBot.Cli {
             System.Threading.Thread.Sleep(delay);
         }
 
-        void IGameEngineDependencyProvider.Play(string url) {
-            Console.WriteLine($"({url})");
+        void IGameEngineDependencyProvider.Play(string name) {
+            Console.WriteLine($"({name})");
         }
 
         void IGameEngineDependencyProvider.NotUnderstood() {

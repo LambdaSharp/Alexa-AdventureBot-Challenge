@@ -1,4 +1,10 @@
-.DS_Store
+# Visual Studio Code
+.vscode
+
+# .NET Core
 bin
 obj
-demo
+
+# LambdaSharpTool
+cloudformation.json
+*-*.zip

@@ -207,5 +207,5 @@ Alexa compatible MP3 can be produced with the `ffmpeg` utility:
 This challenge was made possible by the excellent of Tim Heuer who wrote the outstanding [Alexa.NET](https://github.com/timheuer/alexa-skills-dotnet/) library!
 
 ### Copyright & License
-* Copyright (c) 2017-2018 Steve Bjorg
-* MIT License
+* Copyright (c) 2018 MindTouch, Inc.
+* Apache 2.0

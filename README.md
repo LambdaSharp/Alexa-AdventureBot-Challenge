@@ -17,7 +17,27 @@ The following tools and accounts are required to complete these instructions.
 2. Change folder the command line project: `cd AdventureBot.Cli`
 3. Run app with a sample file: `dotnet run ../assets/sample-adventure.json`
 
-## LEVEL 1 - Setup AdventureBot Alexa Skill
+## LEVEL 0 - Setup λ# Tool
+
+* Clone λ# v0.2 from https://github.com/LambdaSharp/LambdaSharpTool
+* Follow the setup instructions at https://github.com/LambdaSharp/LambdaSharpTool/tree/master/Bootstrap
+
+## LEVEL 1 - Deploy AdventureBot Lambda Function
+
+### Create `lambdasharp` AWS Profile
+The project uses by default the `lambdasharp` profile. Follow these steps to setup a new profile if need be.
+
+1. Create a `lambdasharp` profile: `aws configure --profile lambdasharp`
+2. Configure the profile with the AWS credentials you want to use
+3. **NOTE**: AWS Lambda function for Alexa Skills must be deployed in `us-east-1`
+
+### Deploy AdventureBot
+The AdventureBot code is packaged as a λ# deployment, which streamlines the creating and uploading of assets for serverless applications.
+
+1. Open a shell and switch to the git checkout folder
+2. Run the λ# tool to deploy AdventureBot: `lash deploy --profile lambdasharp --tier test`
+
+## LEVEL 2 - Setup AdventureBot Alexa Skill
 The following steps set up the Alexa Skill with an invocation name, a predefined set of voice commands, and associates it with the AdventureBot lambda function.
 
 1. [Log into the Amazon Developer Console](https://developer.amazon.com/home.html)
@@ -40,62 +60,13 @@ The following steps set up the Alexa Skill with an invocation name, a predefined
 7. *Configuration*
     1. Select `AWS lambda ARN (Amazon Resource Name)`
     2. Select `North America`
-    3. Paste in the AWS lambda function ARN: `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AlexaEcho` (**NOTE:** the missing account ID will be provided during the challenge)
+    3. Paste in the AWS lambda function ARN: `arn:aws:lambda:us-east-1:******:function:test-AdventureBot-Alexa` (**NOTE:** the missing account ID will be provided during the challenge)
     4. Click `Next`
 8. **Congratulations!!** Your Alexa Skill is now available on all your registered Alexa-devices, including the Amazon mobile app. Give it a whirl!
     * For Alexa devices, say: `Alexa, open Adventure Bot`
     * For the Amazon mobile app, click the microphone icon, and say: `open Adventure Bot`
     * Then say, `describe`, `hint`, `yes`, or any other custom and built-in intents.
     * Say `quit` to exit the skill.
-
-## LEVEL 2 - Deploy AdventureBot Lambda Function
-
-### Create `lambdasharp` AWS Profile
-The project uses by default the `lambdasharp` profile. Follow these steps to setup a new profile if need be.
-
-1. Create a `lambdasharp` profile: `aws configure --profile lambdasharp`
-2. Configure the profile with the AWS credentials you want to use
-3. **NOTE**: AWS Lambda function for Alexa Skills must be deployed in `us-east-1`
-
-### Deploy AdventureBot
-The AdventureBot code is packaged as a λ# deployment, which streamlines the creating and uploading of assets for serverless applications.
-
-1. Open a shell and switch to the git checkout folder
-2. Run the λ# tool to deploy AdventureBot: `lst deploy --profile lambdasharp --deployment test`
-
-### Upload AdventureBot JSON file
-The AdventureBot lambda function reads the adventure definition from a JSON file that must be uploaded to S3. Follow these steps to create a new bucket and upload a sample adventure file.
-
-1. Upload `assets/sample-adventure.json` file to the AdventureBot S3 bucket using the console
-
-### Publish the AdventureBot lambda function
-The AdventureBot lambda function needs to be compiled and published to AWS `us-east-1`. The default publishing settings are in `aws-lambda-tools-defaults.json` file and assume the `lambdasharp` profile. Once published, the lambda function needs to be configured to be ready for invocation by the Alexa Skill.
-
-1. Change folder to the lambda function: `cd AdventureBot.Alexa`
-2. Publish the lambda function: `dotnet lambda deploy-function`
-3. [Go to the published lambda function in the console](https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/LambdaSharp-AdventureBotAlexa?tab=code)
-4. Copy the AWS Lambda function ARN for later (e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
-5. Under `Code` > `Environment Variables`
-    1. Add key: `adventure_file`
-    2. Add value pointing to the JSON file (replace with your bucket name and file path): `s3://lambdasharp/AdventureBot/sample-adventure.json`
-    3. Click `Save`
-6. Under `Triggers`
-    1. Click `Add Trigger`
-    2. Select `Alexa Skills Kit`
-    3. Click `Submit` (**NOTE**: if `Submit` is grayed out, select `Alexa Smart Home` trigger instead and then select `Alexa Skills Kit` trigger again)
-
-#### Update the Alexa kill
-Finally, the Alexa Sill needs to be updated to point to the AdventureBot lambda function.
-
-(e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
-
-1. [Log into the Amazon Developer Console](https://developer.amazon.com/home.html)
-2. Click on the `ALEXA` tab
-3. Click on Alexa Skill Kit `Get Started`
-4. Click on `AdventureBot`
-7. Click on `Configuration`
-3. Update the AWS lambda function with the ARN you copied from the AdventureBot lambda function: (e.g. `arn:aws:lambda:us-east-1:******:function:LambdaSharp-AdventureBotAlexa`)
-4. Click `Save`
 
 ### LEVEL 3 - Notify Yourself When Someone Completes Your Adventure
 This part is left as an exercise to the reader.

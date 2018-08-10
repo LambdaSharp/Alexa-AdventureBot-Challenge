@@ -24,15 +24,15 @@ Parameters:
 
   - Name: AdventureFiles
     Description: Package of all adventures files to be uploaded to S3 bucket
-    Package: assets/adventures/
-    Destination:
+    Package: 
+      Files: assets/adventures/
       Bucket: AdventureBucket
       Prefix: Adventures/
 
   - Name: SoundFiles
     Description: Package of all sound files to be uploaded to S3 bucket
-    Package: assets/sounds/*.mp3
-    Destination:
+    Package: 
+      Files: assets/sounds/*.mp3
       Bucket: AdventureBucket
       Prefix: Sounds/
 

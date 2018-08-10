@@ -26,7 +26,7 @@ using System.Linq;
 
 namespace AdventureBot.Cli {
 
-    public class Program : IGameEngineDependencyProvider {
+    public class Program {
 
         //--- Class Methods ---
         public static void Main(string[] args) {
@@ -45,9 +45,9 @@ namespace AdventureBot.Cli {
             Game game;
             GameState state;
             try {
-                game = GameLoader.LoadFrom(args[0]);
+                game = Game.LoadFrom(args[0]);
                 state = new GameState("cli", Game.StartPlaceId);
-            } catch(GameLoaderException e) {
+            } catch(GameException e) {
                 Console.WriteLine($"ERROR: {e.Message}");
                 return;
             } catch(Exception e) {
@@ -58,7 +58,7 @@ namespace AdventureBot.Cli {
 
             // invoke game
             var app = new Program();
-            GameEngine engine = new GameEngine(game, state, app);
+            var engine = new GameEngine(game, state);
             app.GameLoop(engine);
         }
 
@@ -99,30 +99,35 @@ namespace AdventureBot.Cli {
             }
         }
 
-        //--- IGameEngineDependencyProvider Members ---
-        void IGameEngineDependencyProvider.Say(string text) {
-            TypeLine(text);
-        }
-
-        void IGameEngineDependencyProvider.Delay(TimeSpan delay) {
-            System.Threading.Thread.Sleep(delay);
-        }
-
-        void IGameEngineDependencyProvider.Play(string name) {
-            Console.WriteLine($"({name})");
-        }
-
-        void IGameEngineDependencyProvider.NotUnderstood() {
-            TypeLine("Sorry, I don't know what that means.");
-        }
-
-        void IGameEngineDependencyProvider.Bye() {
-            TypeLine("Good bye.");
-            System.Environment.Exit(0);
-        }
-
-        void IGameEngineDependencyProvider.Error(string description) {
-            throw new Exception(description);
+        // local functions
+        private void ProcessResponse(AGameResponse response) {
+            switch(response) {
+            case GameResponseSay say:
+                TypeLine(say.Text);
+                break;
+            case GameResponseDelay delay:
+                System.Threading.Thread.Sleep(delay.Delay);
+                break;
+            case GameResponsePlay play:
+                Console.WriteLine($"({play.Name})");
+                break;
+            case GameResponseNotUnderstood _:
+                TypeLine("Sorry, I don't know what that means.");
+                break;
+            case GameResponseBye _:
+                TypeLine("Good bye.");
+                System.Environment.Exit(0);
+                break;
+            case GameResponseFinished _:
+                break;
+            case GameResponseMultiple multiple:
+                foreach(var nestedResponse in multiple.Responses) {
+                    ProcessResponse(nestedResponse);
+                }
+                break;
+            default:
+                throw new GameException($"Unknown response type: {response?.GetType().FullName}");
+            }
         }
     }
 }

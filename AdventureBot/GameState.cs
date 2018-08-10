@@ -26,7 +26,6 @@ namespace AdventureBot {
     public enum GameStateStatus {
         New,
         InProgress,
-        Restored
     }
 
     public class GameState {

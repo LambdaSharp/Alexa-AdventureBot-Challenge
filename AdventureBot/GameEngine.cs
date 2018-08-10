@@ -25,33 +25,21 @@ using System.Linq;
 
 namespace AdventureBot {
 
-    public interface IGameEngineDependencyProvider {
-
-        //--- Methods ---
-        void Say(string text);
-        void Delay(TimeSpan delay);
-        void Play(string url);
-        void NotUnderstood();
-        void Bye();
-        void Error(string description);
-    }
-
     public class GameEngine {
 
         //--- Fields ---
-        private IGameEngineDependencyProvider _provider;
         private Game _game;
         private GameState _state;
 
         //--- Constructors ---
-        public GameEngine(Game game, GameState state, IGameEngineDependencyProvider provider) {
-            _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        public GameEngine(Game game, GameState state) {
             _game = game ?? throw new ArgumentNullException(nameof(game));
             _state = state ?? throw new ArgumentNullException(nameof(state));
         }
 
         //--- Methods ---
-        public void Do(GameCommandType command) {
+        public AGameResponse Do(GameCommandType command) {
+            var responses = new List<AGameResponse>();
 
             // record that a command was issued
             ++_state.CommandsIssued;
@@ -70,48 +58,45 @@ namespace AdventureBot {
 
             // check if the place has associated actions for the choice
             if(!_game.Places.TryGetValue(_state.CurrentPlaceId, out GamePlace place)) {
-                _provider.Error($"Cannot find current place: '{_state.CurrentPlaceId}'");
-                return;
+                throw new GameException($"Cannot find current place: '{_state.CurrentPlaceId}'");
             }
             if(place.Choices.TryGetValue(command, out IEnumerable<KeyValuePair<GameActionType, string>> choice)) {
                 foreach(var action in choice) {
                     switch(action.Key) {
                     case GameActionType.Goto:
                         if(!_game.Places.TryGetValue(action.Value, out place)) {
-                            _provider.Error($"Cannot find goto place: '{action.Value}'");
-                        } else {
+                            throw new GameException($"Cannot find goto place '{action.Value}'");
+                        }
 
-                            // check if we're in a new place and need to describe it
-                            if(_state.CurrentPlaceId != place.Id) {
-                                _state.CurrentPlaceId = place.Id;
-                                DescribePlace(place);
-                            }
+                        // check if we're in a new place and need to describe it
+                        if(_state.CurrentPlaceId != place.Id) {
+                            _state.CurrentPlaceId = place.Id;
+                            DescribePlace(place);
                         }
                         break;
                     case GameActionType.Say:
-                        _provider.Say(action.Value);
+                        responses.Add(new GameResponseSay(action.Value));
                         break;
                     case GameActionType.Pause:
                         if(!double.TryParse(action.Value, out double delayValue)) {
-                            _provider.Error($"Delay must be a number: '{action.Value}'");
-                        } else {
-                            _provider.Delay(TimeSpan.FromSeconds(delayValue));
+                            throw new GameException($"Delay must be a number '{action.Value}'");
                         }
+                        responses.Add(new GameResponseDelay(TimeSpan.FromSeconds(delayValue)));
                         break;
                     case GameActionType.Play:
-                        _provider.Play(action.Value);
+                        responses.Add(new GameResponsePlay(action.Value));
                         break;
                     }
                 }
             } else if(!optional) {
-                _provider.NotUnderstood();
+                responses.Add(new GameResponseNotUnderstood());
             }
             switch(command) {
             case GameCommandType.Describe:
                 DescribePlace(place);
                 break;
             case GameCommandType.Help:
-                _provider.Say(place.Instructions);
+                responses.Add(new GameResponseSay(place.Instructions));
                 break;
             case GameCommandType.Hint:
 
@@ -132,19 +117,22 @@ namespace AdventureBot {
                 DescribePlace(place);
                 break;
             case GameCommandType.Quit:
-                _provider.Bye();
+                responses.Add(new GameResponseBye());
                 break;
             }
+            return (responses.Count == 1)
+                ? responses.First()
+                : new GameResponseMultiple(responses);
 
             // helper functions
             void DescribePlace(GamePlace current) {
                 if((current.Description != null) && (current.Instructions != null)) {
-                    _provider.Say(current.Description);
-                    _provider.Say(current.Instructions);
+                    responses.Add(new GameResponseSay(current.Description));
+                    responses.Add(new GameResponseSay(current.Instructions));
                 } else if(current.Description != null) {
-                    _provider.Say(current.Description);
+                    responses.Add(new GameResponseSay(current.Description));
                 } else if(current.Instructions != null) {
-                    _provider.Say(current.Instructions);
+                    responses.Add(new GameResponseSay(current.Instructions));
                 }
            }
         }

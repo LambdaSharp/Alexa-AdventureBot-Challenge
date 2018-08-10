@@ -71,6 +71,9 @@ Parameters:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+        TimeToLiveSpecification:
+          AttributeName: Expire
+          Enabled: true
 
 Functions:
 

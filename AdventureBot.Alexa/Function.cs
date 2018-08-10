@@ -52,7 +52,7 @@ namespace AdventureBot.Alexa {
         private const string PROMPT_MISUNDERSTOOD = "Sorry, I didn't understand your response.";
         private const string PROMPT_GOODBYE = "Good bye.";
         private const string PROMPT_OOPS = "Oops, something went wrong. Please try again.";
-        private const string SESSION_STATE_KEY = "game-state";
+        private const string SESSION_STATE_KEY = "adventure-state";
 
         //--- Fields ---
         private AmazonS3Client _s3Client;
@@ -105,12 +105,12 @@ namespace AdventureBot.Alexa {
                     source = Encoding.UTF8.GetString(memory.ToArray());
                 }
 
-                // process game file
-                Game game = Game.Parse(source, Path.GetExtension(_adventureFileKey));
+                // process adventure file
+                Adventure adventure = Adventure.Parse(source, Path.GetExtension(_adventureFileKey));
 
                 // restore player object from session
-                var state = await RestoreGameState(game, skill.Session);
-                var engine = new GameEngine(game, state);
+                var state = await RestoreAdventureState(adventure, skill.Session);
+                var engine = new AdventureEngine(adventure, state);
                 LogInfo($"player status: {state.Status}");
 
                 // decode skill request
@@ -123,33 +123,33 @@ namespace AdventureBot.Alexa {
                     LogInfo("launch");
 
                     // kick off the adventure!
-                    state.Status = GameStateStatus.InProgress;
-                    response = Do(engine, GameCommandType.Restart, new XElement("ssml", new XElement("p", new XText(PROMPT_WELCOME))));
-                    reprompt = Do(engine, GameCommandType.Help);
+                    state.Status = AdventureStatus.InProgress;
+                    response = Do(engine, AdventureCommandType.Restart, new XElement("ssml", new XElement("p", new XText(PROMPT_WELCOME))));
+                    reprompt = Do(engine, AdventureCommandType.Help);
                     break;
 
                 // skill was activated with an intent
                 case IntentRequest intent:
-                    var isGameCommand = Enum.TryParse(intent.Intent.Name, true, out GameCommandType command);
+                    var isAdventureCommand = Enum.TryParse(intent.Intent.Name, true, out AdventureCommandType command);
 
                     // check if the intent is an adventure intent
-                    if(isGameCommand) {
+                    if(isAdventureCommand) {
                         LogInfo($"adventure intent ({intent.Intent.Name})");
                         response = Do(engine, command);
-                        reprompt = Do(engine, GameCommandType.Help);
+                        reprompt = Do(engine, AdventureCommandType.Help);
                     } else {
 
                         // built-in intents
                         switch(intent.Intent.Name) {
                         case BuiltInIntent.Help:
                             LogInfo($"built-in help intent ({intent.Intent.Name})");
-                            response = Do(engine, GameCommandType.Help);
-                            reprompt = Do(engine, GameCommandType.Help);
+                            response = Do(engine, AdventureCommandType.Help);
+                            reprompt = Do(engine, AdventureCommandType.Help);
                             break;
                         case BuiltInIntent.Stop:
                         case BuiltInIntent.Cancel:
                             LogInfo($"built-in stop/cancel intent ({intent.Intent.Name})");
-                            response = Do(engine, GameCommandType.Quit);
+                            response = Do(engine, AdventureCommandType.Quit);
                             break;
                         default:
 
@@ -158,7 +158,7 @@ namespace AdventureBot.Alexa {
                             response = new PlainTextOutputSpeech {
                                 Text = PROMPT_MISUNDERSTOOD
                             };
-                            reprompt = Do(engine, GameCommandType.Help);
+                            reprompt = Do(engine, AdventureCommandType.Help);
                             break;
                         }
                     }
@@ -181,7 +181,7 @@ namespace AdventureBot.Alexa {
                 }
 
                 // check if the player reached the end
-                if(game.Places[state.CurrentPlaceId].Finished) {
+                if(adventure.Places[state.CurrentPlaceId].Finished) {
                     state.End = DateTime.UtcNow;
 
                     // send out notification when player reaches the end
@@ -192,7 +192,7 @@ namespace AdventureBot.Alexa {
                 }
 
                 // create/update player record so we can continue in a future session
-                await StoreGameState(state);
+                await StoreAdventureState(state);
 
                 // respond with serialized player state
                 if(reprompt != null) {
@@ -217,9 +217,9 @@ namespace AdventureBot.Alexa {
             }
         }
 
-        private async Task<GameState> RestoreGameState(Game game, Session session) {
+        private async Task<AdventureState> RestoreAdventureState(Adventure adventure, Session session) {
             var recordId = UserIdToSessionRecordKey(session.User.UserId);
-            GameState state = null;
+            AdventureState state = null;
             if(session.New) {
 
                 // check if the player can be restored from the session table
@@ -231,11 +231,11 @@ namespace AdventureBot.Alexa {
                     });
                     if(record.IsItemSet) {
                         LogInfo("restored player from session table");
-                        state = JsonConvert.DeserializeObject<GameState>(record.Item["State"].S);
-                        state.Status = GameStateStatus.InProgress;
+                        state = JsonConvert.DeserializeObject<AdventureState>(record.Item["State"].S);
+                        state.Status = AdventureStatus.InProgress;
 
                         // check if the place the player was in still exists or if the player had reached an end state
-                        if(!game.Places.TryGetValue(state.CurrentPlaceId, out GamePlace place)) {
+                        if(!adventure.Places.TryGetValue(state.CurrentPlaceId, out AdventurePlace place)) {
                             LogWarn($"unable to find matching place for restored player from session table (value: '{state.CurrentPlaceId}')");
 
                             // reset player
@@ -254,10 +254,10 @@ namespace AdventureBot.Alexa {
                 if(!session.Attributes.TryGetValue(SESSION_STATE_KEY, out object playerStateValue) || !(playerStateValue is JObject playerState)) {
                     LogWarn($"unable to find player state in session (type: {playerStateValue?.GetType().Name})\n" + JsonConvert.SerializeObject(session));
                 } else {
-                    state = playerState.ToObject<GameState>();
+                    state = playerState.ToObject<AdventureState>();
 
-                    // validate the game still has a matching place for the player
-                    if(!game.Places.ContainsKey(state.CurrentPlaceId)) {
+                    // validate the adventure still has a matching place for the player
+                    if(!adventure.Places.ContainsKey(state.CurrentPlaceId)) {
                         LogWarn($"unable to find matching place for restored player in session (value: '{state.CurrentPlaceId}')\n" + JsonConvert.SerializeObject(session));
 
                         // reset player
@@ -269,7 +269,7 @@ namespace AdventureBot.Alexa {
             // create new player if no player was restored
             if(state == null) {
                 LogInfo("new player session started");
-                state = new GameState(recordId, Game.StartPlaceId);
+                state = new AdventureState(recordId, Adventure.StartPlaceId);
             }
             return state;
 
@@ -280,7 +280,7 @@ namespace AdventureBot.Alexa {
             }
         }
 
-        private async Task StoreGameState(GameState state) {
+        private async Task StoreAdventureState(AdventureState state) {
             if(_adventurePlayerTable != null) {
                 LogInfo("storing player in session table");
                 await _dynamoClient.PutItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
@@ -296,7 +296,7 @@ namespace AdventureBot.Alexa {
             }
         }
 
-        private IOutputSpeech Do(GameEngine engine, GameCommandType command, XElement ssml = null) {
+        private IOutputSpeech Do(AdventureEngine engine, AdventureCommandType command, XElement ssml = null) {
             ssml = ssml ?? new XElement("ssml");
             ProcessResponse(engine.Do(command));
             return new SsmlOutputSpeech {
@@ -304,32 +304,32 @@ namespace AdventureBot.Alexa {
             };
 
             // local functions
-            void ProcessResponse(AGameResponse response) {
+            void ProcessResponse(AAdventureResponse response) {
                 switch(response) {
-                case GameResponseSay say:
+                case AdventureResponseSay say:
                     ssml.Add(new XElement("p", new XText(say.Text)));
                     break;
-                case GameResponseDelay delay:
+                case AdventureResponseDelay delay:
                     ssml.Add(new XElement("break", new XAttribute("time", (int)delay.Delay.TotalMilliseconds + "ms")));
                     break;
-                case GameResponsePlay play:
+                case AdventureResponsePlay play:
                     ssml.Add(new XElement("audio", new XAttribute("src", _adventureSoundFilesPublicUrl + play.Name)));
                     break;
-                case GameResponseNotUnderstood _:
+                case AdventureResponseNotUnderstood _:
                     ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
                     break;
-                case GameResponseBye _:
+                case AdventureResponseBye _:
                     ssml.Add(new XElement("p", new XText(PROMPT_GOODBYE)));
                     break;
-                case GameResponseFinished _:
+                case AdventureResponseFinished _:
                     break;
-                case GameResponseMultiple multiple:
+                case AdventureResponseMultiple multiple:
                     foreach(var nestedResponse in multiple.Responses) {
                         ProcessResponse(nestedResponse);
                     }
                     break;
                 default:
-                    throw new GameException($"Unknown response type: {response?.GetType().FullName}");
+                    throw new AdventureException($"Unknown response type: {response?.GetType().FullName}");
                 }
             }
         }

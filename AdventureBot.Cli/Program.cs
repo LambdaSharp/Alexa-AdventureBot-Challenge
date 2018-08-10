@@ -41,13 +41,13 @@ namespace AdventureBot.Cli {
                 return;
             }
 
-            // initialize the game from the adventure file
-            Game game;
-            GameState state;
+            // initialize the adventure from the adventure file
+            Adventure adventure;
+            AdventureState state;
             try {
-                game = Game.LoadFrom(args[0]);
-                state = new GameState("cli", Game.StartPlaceId);
-            } catch(GameException e) {
+                adventure = Adventure.LoadFrom(args[0]);
+                state = new AdventureState("cli", Adventure.StartPlaceId);
+            } catch(AdventureException e) {
                 Console.WriteLine($"ERROR: {e.Message}");
                 return;
             } catch(Exception e) {
@@ -56,10 +56,10 @@ namespace AdventureBot.Cli {
                 return;
             }
 
-            // invoke game
+            // invoke adventure
             var app = new Program();
-            var engine = new GameEngine(game, state);
-            app.GameLoop(engine);
+            var engine = new AdventureEngine(adventure, state);
+            app.AdventureLoop(engine);
         }
 
         private static void TypeLine(string text = "") {
@@ -74,20 +74,20 @@ namespace AdventureBot.Cli {
         }
 
         //--- Methods ---
-        private void GameLoop(GameEngine engine) {
+        private void AdventureLoop(AdventureEngine engine) {
 
-            // start the game loop
-            engine.Do(GameCommandType.Restart);
+            // start the adventure loop
+            engine.Do(AdventureCommandType.Restart);
             try {
                 while(true) {
 
                     // prompt user input
                     Console.Write("> ");
                     var commandText = Console.ReadLine().Trim().ToLower();
-                    if(!Enum.TryParse(commandText, true, out GameCommandType command)) {
+                    if(!Enum.TryParse(commandText, true, out AdventureCommandType command)) {
 
                         // TODO (2017-07-21, bjorg): need a way to invoke a 'command not understood' reaction
-                        // responses = new[] { new GameResponseNotUnderstood() };
+                        // responses = new[] { new AdventureResponseNotUnderstood() };
                         continue;
                     }
 
@@ -100,33 +100,33 @@ namespace AdventureBot.Cli {
         }
 
         // local functions
-        private void ProcessResponse(AGameResponse response) {
+        private void ProcessResponse(AAdventureResponse response) {
             switch(response) {
-            case GameResponseSay say:
+            case AdventureResponseSay say:
                 TypeLine(say.Text);
                 break;
-            case GameResponseDelay delay:
+            case AdventureResponseDelay delay:
                 System.Threading.Thread.Sleep(delay.Delay);
                 break;
-            case GameResponsePlay play:
+            case AdventureResponsePlay play:
                 Console.WriteLine($"({play.Name})");
                 break;
-            case GameResponseNotUnderstood _:
+            case AdventureResponseNotUnderstood _:
                 TypeLine("Sorry, I don't know what that means.");
                 break;
-            case GameResponseBye _:
+            case AdventureResponseBye _:
                 TypeLine("Good bye.");
                 System.Environment.Exit(0);
                 break;
-            case GameResponseFinished _:
+            case AdventureResponseFinished _:
                 break;
-            case GameResponseMultiple multiple:
+            case AdventureResponseMultiple multiple:
                 foreach(var nestedResponse in multiple.Responses) {
                     ProcessResponse(nestedResponse);
                 }
                 break;
             default:
-                throw new GameException($"Unknown response type: {response?.GetType().FullName}");
+                throw new AdventureException($"Unknown response type: {response?.GetType().FullName}");
             }
         }
     }

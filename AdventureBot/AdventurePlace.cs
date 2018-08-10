@@ -23,7 +23,7 @@ using System.Collections.Generic;
 
 namespace AdventureBot {
 
-    public enum GameCommandType {
+    public enum AdventureCommandType {
         One = 1,
         Two,
         Three,
@@ -51,14 +51,14 @@ namespace AdventureBot {
         Quit
     }
 
-    public enum GameActionType {
+    public enum AdventureActionType {
         Goto = 1,
         Say,
         Pause,
         Play
     }
 
-     public class GamePlace {
+     public class AdventurePlace {
 
         //--- Fields ---
         public readonly string Id;
@@ -66,10 +66,10 @@ namespace AdventureBot {
         public readonly string Instructions;
         public readonly bool Finished;
 
-        public readonly Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> Choices;
+        public readonly Dictionary<AdventureCommandType, IEnumerable<KeyValuePair<AdventureActionType, string>>> Choices;
 
         //--- Constructors ---
-        public GamePlace(string id, string description, string instructions, bool finished, Dictionary<GameCommandType, IEnumerable<KeyValuePair<GameActionType, string>>> choices) {
+        public AdventurePlace(string id, string description, string instructions, bool finished, Dictionary<AdventureCommandType, IEnumerable<KeyValuePair<AdventureActionType, string>>> choices) {
             Id = id;
             Description = description;
             Instructions = instructions;

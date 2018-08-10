@@ -24,54 +24,54 @@ using System.Collections.Generic;
 
 namespace AdventureBot {
 
-    public abstract class AGameResponse { }
+    public abstract class AAdventureResponse { }
 
-    public class GameResponseSay : AGameResponse {
+    public class AdventureResponseSay : AAdventureResponse {
 
         //--- Fields ---
         public string Text;
 
         //--- Constructors ---
-        public GameResponseSay(string text) {
+        public AdventureResponseSay(string text) {
             Text = text ?? throw new ArgumentNullException(nameof(text));
         }
     }
 
-    public class GameResponseDelay : AGameResponse {
+    public class AdventureResponseDelay : AAdventureResponse {
 
         //--- Fields ---
         public readonly TimeSpan Delay;
 
         //--- Constructors ---
-        public GameResponseDelay(TimeSpan delay) {
+        public AdventureResponseDelay(TimeSpan delay) {
             Delay = delay;
         }
     }
 
-    public class GameResponsePlay : AGameResponse {
+    public class AdventureResponsePlay : AAdventureResponse {
 
         //--- Fields ---
         public readonly string Name;
 
         //--- Constructors ---
-        public GameResponsePlay(string name) {
+        public AdventureResponsePlay(string name) {
             Name = name ?? throw new ArgumentNullException(nameof(name));
         }
     }
 
-    public class GameResponseNotUnderstood : AGameResponse { }
+    public class AdventureResponseNotUnderstood : AAdventureResponse { }
 
-    public class GameResponseBye : AGameResponse { }
+    public class AdventureResponseBye : AAdventureResponse { }
 
-    public class GameResponseFinished : AGameResponse { }
+    public class AdventureResponseFinished : AAdventureResponse { }
 
-    public class GameResponseMultiple : AGameResponse {
+    public class AdventureResponseMultiple : AAdventureResponse {
 
         //--- Fields ---
-        public readonly IEnumerable<AGameResponse> Responses;
+        public readonly IEnumerable<AAdventureResponse> Responses;
 
         //--- Constructors ---
-        public GameResponseMultiple(IEnumerable<AGameResponse> responses) {
+        public AdventureResponseMultiple(IEnumerable<AAdventureResponse> responses) {
             Responses = responses ?? throw new ArgumentNullException(nameof(responses));
         }
     }

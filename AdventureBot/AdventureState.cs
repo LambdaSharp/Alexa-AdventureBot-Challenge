@@ -23,24 +23,24 @@ using System;
 
 namespace AdventureBot {
 
-    public enum GameStateStatus {
+    public enum AdventureStatus {
         New,
         InProgress,
     }
 
-    public class GameState {
+    public class AdventureState {
 
         //--- Fields ---
         public string RecordId;
         public string CurrentPlaceId;
-        public GameStateStatus Status = GameStateStatus.New;
+        public AdventureStatus Status = AdventureStatus.New;
         public DateTime Start = DateTime.UtcNow;
         public DateTime? End = null;
-        public int GameAttempts = 0;
+        public int AdventureAttempts = 0;
         public int CommandsIssued = 0;
 
         //--- Constructors ---
-        public GameState(string recordId, string currentPlaceId) {
+        public AdventureState(string recordId, string currentPlaceId) {
             RecordId = recordId;
             CurrentPlaceId = currentPlaceId;
         }

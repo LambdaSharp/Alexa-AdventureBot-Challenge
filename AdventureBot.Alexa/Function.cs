@@ -56,26 +56,6 @@ namespace AdventureBot.Alexa {
         private const string SESSION_STATE_KEY = "game-state";
 
         //--- Class Methods ---
-        private static string ReadTextFromS3(AmazonS3Client s3Client, string bucket, string filepath) {
-            try {
-                using(var response = s3Client.GetObjectAsync(bucket, filepath).Result) {
-                    if(response.HttpStatusCode != HttpStatusCode.OK) {
-                        throw new Exception($"unable to load file from 's3://{bucket}/{filepath}'");
-                    }
-                    var memory = new MemoryStream();
-                    response.ResponseStream.CopyTo(memory);
-                    return Encoding.UTF8.GetString(memory.ToArray());
-                }
-            } catch(Exception e) {
-                Log($"*** EXCEPTION: {e}");
-                return null;
-            }
-        }
-
-        private static void Log(string text) {
-            LambdaLogger.Log(text + "\n");
-        }
-
         private static string UserIdToSessionRecordKey(string userId) {
             var md5 = System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(userId));
             return $"resume-{new Guid(md5):N}";
@@ -124,7 +104,7 @@ namespace AdventureBot.Alexa {
         public override async Task<SkillResponse> ProcessMessageAsync(SkillRequest skill, ILambdaContext context) {
 
             // validate configuration
-            var source = ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFileKey);
+            var source = await ReadTextFromS3(_adventureFileBucket, _adventureFileKey);
             if(source == null) {
                 return ResponseBuilder.Tell(new PlainTextOutputSpeech {
                     Text = "There was an error loading the adventure file. " +
@@ -137,7 +117,7 @@ namespace AdventureBot.Alexa {
             try {
                 game = GameLoader.Parse(source, Path.GetExtension(_adventureFileKey));
             } catch(Exception e) {
-                Log($"*** EXCEPTION: {e}");
+                LogError(e, "unable to load game file");
                 return ResponseBuilder.Tell(new PlainTextOutputSpeech {
                     Text = "There was an error parsing the adventure file. " +
                         "Make sure the adventure file is properly formatted."
@@ -146,7 +126,7 @@ namespace AdventureBot.Alexa {
 
             // restore player object from session
             var state = await RestoreGameState(game, skill.Session);
-            Log($"*** INFO: player status: {state.Status}");
+            LogInfo($"player status: {state.Status}");
 
             // decode skill request
             IOutputSpeech response;
@@ -156,7 +136,7 @@ namespace AdventureBot.Alexa {
 
             // skill was activated without an intent
             case LaunchRequest launch:
-                Log($"*** INFO: launch");
+                LogInfo($"launch");
 
                 // check status of player
                 switch(state.Status) {
@@ -208,7 +188,7 @@ namespace AdventureBot.Alexa {
 
                     // check if the intent is an adventure intent
                     if(isGameCommand) {
-                        Log($"*** INFO: adventure intent ({intent.Intent.Name})");
+                        LogInfo($"adventure intent ({intent.Intent.Name})");
                         response = TryDo(engine, command);
                         reprompt = TryDo(engine, GameCommandType.Help);
                     } else {
@@ -216,20 +196,20 @@ namespace AdventureBot.Alexa {
 
                         // built-in intents
                         case BuiltInIntent.Help:
-                            Log($"*** INFO: built-in help intent ({intent.Intent.Name})");
+                            LogInfo($"built-in help intent ({intent.Intent.Name})");
                             response = TryDo(engine, GameCommandType.Help);
                             reprompt = TryDo(engine, GameCommandType.Help);
                             break;
 
                         case BuiltInIntent.Stop:
                         case BuiltInIntent.Cancel:
-                            Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})");
+                            LogInfo($"built-in stop/cancel intent ({intent.Intent.Name})");
                             response = TryDo(engine, GameCommandType.Quit);
                             break;
 
                         // unknown & unsupported intents
                         default:
-                            Log("*** WARNING: intent not recognized");
+                            LogWarn("intent not recognized");
                             response = new PlainTextOutputSpeech {
                                 Text = PROMPT_MISUNDERSTOOD
                             };
@@ -242,7 +222,7 @@ namespace AdventureBot.Alexa {
 
                     // check if the intent is an adventure intent
                     if(isGameCommand) {
-                        Log($"*** INFO: adventure intent ({intent.Intent.Name})");
+                        LogInfo($"adventure intent ({intent.Intent.Name})");
                         switch(command) {
                         case GameCommandType.Yes:
                             state.Status = GameStateStatus.InProgress;
@@ -271,14 +251,14 @@ namespace AdventureBot.Alexa {
                         // built-in intents
                         case BuiltInIntent.Stop:
                         case BuiltInIntent.Cancel:
-                            Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})");
+                            LogInfo($"built-in stop/cancel intent ({intent.Intent.Name})");
                             response = TryDo(engine, GameCommandType.Quit);
                             break;
 
                         // unknown & unsupported intents
                         case BuiltInIntent.Help:
                         default:
-                            Log("*** WARNING: intent not recognized");
+                            LogWarn("intent not recognized");
 
                             // unexpected response; ask again
                             response = new PlainTextOutputSpeech {
@@ -296,18 +276,17 @@ namespace AdventureBot.Alexa {
 
             // skill session ended (no response expected)
             case SessionEndedRequest ended:
-                Log("*** INFO: session ended");
+                LogInfo("session ended");
                 return ResponseBuilder.Empty();
 
             // exception reported on previous response (no response expected)
             case SystemExceptionRequest error:
-                Log("*** INFO: system exception");
-                Log($"*** EXCEPTION: skill request: {JsonConvert.SerializeObject(skill)}");
+                LogWarn($"skill request exception: {JsonConvert.SerializeObject(skill)}");
                 return ResponseBuilder.Empty();
 
             // unknown skill received (no response expected)
             default:
-                Log($"*** WARNING: unrecognized skill request: {JsonConvert.SerializeObject(skill)}");
+                LogWarn($"unrecognized skill request: {JsonConvert.SerializeObject(skill)}");
                 return ResponseBuilder.Empty();
             }
 
@@ -317,14 +296,14 @@ namespace AdventureBot.Alexa {
 
                 // send out notification when player reaches the end
                 if(_adventurePlayerFinishedTopic != null) {
-                    Log("*** INFO: sending out player completion information");
+                    LogInfo("sending out player completion information");
                     await _snsClient.PublishAsync(_adventurePlayerFinishedTopic, JsonConvert.SerializeObject(state, Formatting.None));
                 }
             }
 
             // create/update player record so we can continue in a future session
             if(_adventurePlayerTable != null) {
-                Log("*** INFO: storing player in session table");
+                LogInfo("storing player in session table");
                 await _dynamoClient.PutItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
                     ["Id"] = new AttributeValue { S = state.RecordId },
                     ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(state, Formatting.None) },
@@ -362,19 +341,18 @@ namespace AdventureBot.Alexa {
                         ["Id"] = new AttributeValue { S = recordId }
                     });
                     if(record.IsItemSet) {
-                        Log("*** INFO: restored player from session table");
+                        LogInfo("restored player from session table");
                         state = JsonConvert.DeserializeObject<GameState>(record.Item["State"].S);
                         state.Status = GameStateStatus.Restored;
 
                         // check if the place the player was in still exists or if the player had reached an end state
                         if(!game.Places.TryGetValue(state.CurrentPlaceId, out GamePlace place)) {
-                            Log($"*** WARNING: unable to find matching place for restored player from session table (value: '{state.CurrentPlaceId}')");
-                            Log(JsonConvert.SerializeObject(session));
+                            LogWarn($"unable to find matching place for restored player from session table (value: '{state.CurrentPlaceId}')");
 
                             // reset player
                             state = null;
                         } else if(place.Finished) {
-                            Log("*** INFO: restored player had reached end place");
+                            LogInfo("restored player had reached end place");
 
                             // reset player
                             state = null;
@@ -385,13 +363,13 @@ namespace AdventureBot.Alexa {
 
                 // attempt to deserialize the player information
                 if(!session.Attributes.TryGetValue(SESSION_STATE_KEY, out object playerStateValue) || !(playerStateValue is JObject playerState)) {
-                    Log($"*** WARNING: unable to find player state in session (type: {playerStateValue?.GetType().Name})\n" + JsonConvert.SerializeObject(session));
+                    LogWarn($"unable to find player state in session (type: {playerStateValue?.GetType().Name})\n" + JsonConvert.SerializeObject(session));
                 } else {
                     state = playerState.ToObject<GameState>();
 
                     // validate the game still has a matching place for the player
                     if(!game.Places.ContainsKey(state.CurrentPlaceId)) {
-                        Log($"*** WARNING: unable to find matching place for restored player in session (value: '{state.CurrentPlaceId}')\n" + JsonConvert.SerializeObject(session));
+                        LogWarn($"unable to find matching place for restored player in session (value: '{state.CurrentPlaceId}')\n" + JsonConvert.SerializeObject(session));
 
                         // reset player
                         state = null;
@@ -401,7 +379,7 @@ namespace AdventureBot.Alexa {
 
             // create new player if no player was restored
             if(state == null) {
-                Log("*** INFO: new player session started");
+                LogInfo("new player session started");
                 state = new GameState(recordId, Game.StartPlaceId);
             }
             return state;
@@ -415,15 +393,31 @@ namespace AdventureBot.Alexa {
                     Ssml = _ssml.ToString(SaveOptions.DisableFormatting)
                 };
             } catch(GameException e) {
-                Log($"*** ERROR: a game exception occurred ({e.Message})");
+                LogError(e, "a game exception occurred");
                 return new PlainTextOutputSpeech {
                     Text = PROMPT_OOPS
                 };
             } catch(Exception e) {
-                Log($"*** ERROR: {e}");
+                LogError(e, "an exception occurred");
                 return new PlainTextOutputSpeech {
                     Text = PROMPT_OOPS
                 };
+            }
+        }
+
+        private async Task<string> ReadTextFromS3(string bucket, string key) {
+            try {
+                using(var response = await _s3Client.GetObjectAsync(bucket, key)) {
+                    if(response.HttpStatusCode != HttpStatusCode.OK) {
+                        throw new Exception($"unable to load file from 's3://{bucket}/{key}'");
+                    }
+                    var memory = new MemoryStream();
+                    await response.ResponseStream.CopyToAsync(memory);
+                    return Encoding.UTF8.GetString(memory.ToArray());
+                }
+            } catch(Exception e) {
+                LogError(e, "error processing file");
+                return null;
             }
         }
 

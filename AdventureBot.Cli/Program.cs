@@ -23,6 +23,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using McMaster.Extensions.CommandLineUtils;
 
 namespace AdventureBot.Cli {
 
@@ -30,54 +31,49 @@ namespace AdventureBot.Cli {
 
         //--- Class Methods ---
         public static void Main(string[] args) {
+            var app = new CommandLineApplication {
+                Name = "AdventureBot.Cli",
+                FullName = "AdventureBot Command Line Interface",
+                Description = "Choose-Your-Adventure CLI"
+            };
+            app.HelpOption();
+            var filenameArg = app.Argument("<FILENAME>", "path to adventure file");
+            app.OnExecute(() => {
+                if(filenameArg.Value == null) {
+                    Console.WriteLine(app.GetHelpText());
+                    return;
+                }
+                if(!File.Exists(filenameArg.Value)) {
+                    app.ShowRootCommandFullNameAndVersion();
+                    Console.WriteLine("ERROR: could not find file");
+                    return;
+                }
 
-            // check if a filepath to an adventure file was provided and that the file exists
-            if(args.Length != 1) {
-                Console.WriteLine("ERROR: missing path to adventure file.");
-                return;
-            }
-            if(!File.Exists(args[0])) {
-                Console.WriteLine("ERROR: cannot find file.");
-                return;
-            }
+                // initialize the adventure from the adventure file
+                Adventure adventure;
+                try {
+                    adventure = Adventure.LoadFrom(filenameArg.Value);
+                } catch(AdventureException e) {
+                    Console.WriteLine($"ERROR: {e.Message}");
+                    return;
+                } catch(Exception e) {
+                    Console.WriteLine($"ERROR: unable to load file");
+                    Console.WriteLine(e);
+                    return;
+                }
 
-            // initialize the adventure from the adventure file
-            Adventure adventure;
-            AdventureState state;
-            try {
-                adventure = Adventure.LoadFrom(args[0]);
-                state = new AdventureState("cli", Adventure.StartPlaceId);
-            } catch(AdventureException e) {
-                Console.WriteLine($"ERROR: {e.Message}");
-                return;
-            } catch(Exception e) {
-                Console.WriteLine($"ERROR: unable to load file");
-                Console.WriteLine(e);
-                return;
-            }
-
-            // invoke adventure
-            var app = new Program();
-            var engine = new AdventureEngine(adventure, state);
-            app.AdventureLoop(engine);
+                // invoke adventure
+                var state = new AdventureState("cli", Adventure.StartPlaceId);
+                var engine = new AdventureEngine(adventure, state);
+                AdventureLoop(engine);
+            });
+            app.Execute(args);
         }
 
-        private static void TypeLine(string text = "") {
-
-            // write each character with a random delay to give the text output a typewriter feel
-            var random = new Random();
-            foreach(var c in text) {
-                System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
-                Console.Write(c);
-            }
-            Console.WriteLine();
-        }
-
-        //--- Methods ---
-        private void AdventureLoop(AdventureEngine engine) {
+        private static void AdventureLoop(AdventureEngine engine) {
 
             // start the adventure loop
-            engine.Do(AdventureCommandType.Restart);
+            ProcessResponse(engine.Do(AdventureCommandType.Restart));
             try {
                 while(true) {
 
@@ -92,42 +88,53 @@ namespace AdventureBot.Cli {
                     }
 
                     // process user input
-                    engine.Do(command);
+                    ProcessResponse(engine.Do(command));
                 }
             } catch(Exception e) {
                 Console.Error.WriteLine(e);
             }
+
+            // local functions
+            void ProcessResponse(AAdventureResponse response) {
+                switch(response) {
+                case AdventureResponseSay say:
+                    TypeLine(say.Text);
+                    break;
+                case AdventureResponseDelay delay:
+                    System.Threading.Thread.Sleep(delay.Delay);
+                    break;
+                case AdventureResponsePlay play:
+                    Console.WriteLine($"({play.Name})");
+                    break;
+                case AdventureResponseNotUnderstood _:
+                    TypeLine("Sorry, I don't know what that means.");
+                    break;
+                case AdventureResponseBye _:
+                    TypeLine("Good bye.");
+                    System.Environment.Exit(0);
+                    break;
+                case AdventureResponseFinished _:
+                    break;
+                case AdventureResponseMultiple multiple:
+                    foreach(var nestedResponse in multiple.Responses) {
+                        ProcessResponse(nestedResponse);
+                    }
+                    break;
+                default:
+                    throw new AdventureException($"Unknown response type: {response?.GetType().FullName}");
+                }
+            }
         }
 
-        // local functions
-        private void ProcessResponse(AAdventureResponse response) {
-            switch(response) {
-            case AdventureResponseSay say:
-                TypeLine(say.Text);
-                break;
-            case AdventureResponseDelay delay:
-                System.Threading.Thread.Sleep(delay.Delay);
-                break;
-            case AdventureResponsePlay play:
-                Console.WriteLine($"({play.Name})");
-                break;
-            case AdventureResponseNotUnderstood _:
-                TypeLine("Sorry, I don't know what that means.");
-                break;
-            case AdventureResponseBye _:
-                TypeLine("Good bye.");
-                System.Environment.Exit(0);
-                break;
-            case AdventureResponseFinished _:
-                break;
-            case AdventureResponseMultiple multiple:
-                foreach(var nestedResponse in multiple.Responses) {
-                    ProcessResponse(nestedResponse);
-                }
-                break;
-            default:
-                throw new AdventureException($"Unknown response type: {response?.GetType().FullName}");
+        private static void TypeLine(string text = "") {
+
+            // write each character with a random delay to give the text output a typewriter feel
+            var random = new Random();
+            foreach(var c in text) {
+                System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
+                Console.Write(c);
             }
+            Console.WriteLine();
         }
     }
 }

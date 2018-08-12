@@ -10,7 +10,7 @@ The following tools and accounts are required to complete these instructions.
 * [Install AWS CLI](https://aws.amazon.com/cli/)
 * [Sign-up for an AWS account](https://aws.amazon.com/)
 * [Sign-up for an Amazon developer account](https://developer.amazon.com/alexa)
-* [Install MindTouch LambdaSharp Tool](https://github.com/LambdaSharp/LambdaSharpTool)
+* [Setup LambdaSharp Tool](https://github.com/LambdaSharp/LambdaSharpTool)
 
 ### Running the AdventureBot command line app
 1. Restore solution packages: `dotnet restore`
@@ -61,7 +61,7 @@ The project uses by default the `lambdasharp` profile. Follow these steps to set
 The AdventureBot code is packaged as a λ# deployment, which streamlines the creating and uploading of assets for serverless applications.
 
 1. Open a shell and switch to the git checkout folder
-2. Run the λ# tool to deploy AdventureBot: `lst deploy --profile lambdasharp --deployment test`
+2. Run the λ# tool to deploy AdventureBot: `lst deploy --profile lambdasharp --tier hackathon`
 
 ### Upload AdventureBot JSON file
 The AdventureBot lambda function reads the adventure definition from a JSON file that must be uploaded to S3. Follow these steps to create a new bucket and upload a sample adventure file.
@@ -116,46 +116,92 @@ Create your own adventure and showcase it!
 The AdventureBot uses a simple JSON file to define places. Each place has a description and a list of choices that are available to the player.
 
 ### Main
-The main object has only one field called `"places"`.
+The main object has only one field called `places`.
 
-* `"places"`: Map of place IDs to place objects. This map must contain a place called `"start"`.
+```yaml
+places:
+    PlaceDefinition
+```
 
-```
-{
-    "places": { ... }
-}
-```
+<dl>
+
+<dt><tt>places</tt></dt>
+<dd>
+Map of place IDs to place objects. This map must contain a place called <tt>start</tt>.
+
+<em>Required</em>: Yes
+
+<em>Type</em>: Map of [Place Definitions](#place)
+</dd>
+
+</dl>
 
 ### Place
-The place object has multiple fields. All of them are required.
+The place object has multiple fields.
 
-* `"description"`: Text describing the place/situation the player is in. This text is automatically read when the player first enters a place and can be repeated with the built-in *describe* command.
-* `"instructions"`: Text describing the actions the player can provide. This text is automatically read when the player first enters a place and can be repeated with the built-in *help* command.
-* `"finished"`: (optional) Boolean indicating that the place marks the end of an adventure. The value is `false` by default.
-* `"choices"`: Map of choices to actions the player can make.
+```yaml
+name:
+    description: String
+    instructions: String
+    choices:
+        ChoiceDefinition
+```
 
-```
-{
-    "description": "You are in a room.",
-    "instructions": "To go North, say 1.",
-    "choices": { ... }
-}
-```
+<dl>
+
+<dt><tt>description</tt></dt>
+<dd>
+Text describing the place/situation the player is in. This text is automatically read when the player first enters a place and can be repeated with the built-in *describe* command.
+
+<em>Required</em>: Yes
+
+<em>Type</em>: String
+</dd>
+
+<dt><tt>instructions</tt></dt>
+<dd>
+Text describing the actions the player can provide. This text is automatically read when the player first enters a place and can be repeated with the built-in *help* command.
+
+
+<em>Required</em>: Yes
+
+<em>Type</em>: String
+</dd>
+
+<dt><tt>finished</tt></dt>
+<dd>
+Boolean indicating that the place marks the end of an adventure. The value is <tt>false</tt> by default.
+
+<em>Required</em>: No
+
+<em>Type</em>: Boolean
+</dd>
+
+<dt><tt>choices</tt></dt>
+<dd>
+Map of choices to actions the player can make.
+
+<em>Required</em>: Yes
+
+<em>Type</em>: Map of [Choice Definitions](#choices)
+</dd>
+
+</dl>
 
 ### Choices
 The choice object associates a command with zero or more actions. The field name must be one of the recognized commands:
-* `"1"` through `"9"`
+* `"one"` through `"nine"`
 * `"yes"` and `"no"`
 * `"help"`
 * `"hint"`
 * `"restart"`
 * `"quit"`
 
-```
-{
-    "yes": [ ... ],
-    "no": [ ... ]
-}
+```yaml
+yes:
+  - ActionDefinition
+no:
+  - ActionDefinition
 ```
 
 ### Actions
@@ -164,27 +210,41 @@ The action object associates an action with an argument. The field name must be 
 * `"say"`: Says one or more sentences.
 * `"pause"`: Pause the output for a while.
 * `"play"`: Play an MP3 file.
+* `"goto"`: Go to place.
 
 #### Say Action
 The say action converts text into speech.
 
-```
-{
-    "say": [ "You open the door." ]
-}
+```yaml
+say: You open the door.
 ```
 
 #### Pause Action
 The pause action is delays further speech for the specified duration in seconds.
 
-```
-{
-    "pause": [ 0.5 ]
-}
+```yaml
+pause: 0.5
 ```
 
+
 #### Play Action
-The play action plays back an MP3 file. Note the MP3 file must satisfy the following conditions:
+The play action plays back an MP3 file. Note the MP3 file must satisfy certain conditions (see [APPENDIX B - Sound File Format](#appendix-b---sound-file-format)).
+
+```yaml
+play: door-close.mp3
+```
+
+#### Goto Action
+
+> TODO
+
+```yaml
+goto: name-of-place
+```
+
+## APPENDIX B - Sound File Format
+
+The MP3 file must satisfy the following conditions:
 * The MP3 must be hosted at an Internet-accessible HTTPS endpoint. HTTPS is required, and the domain hosting the MP3 file must present a valid, trusted SSL certificate. Self-signed certificates cannot be used.
 * The MP3 must not contain any customer-specific or other sensitive information.
 * The MP3 must be a valid MP3 file (MPEG version 2).
@@ -195,12 +255,8 @@ The play action plays back an MP3 file. Note the MP3 file must satisfy the follo
 A good source of free samples can be found at [SoundEffects+](https://www.soundeffectsplus.com/).
 
 Alexa compatible MP3 can be produced with the `ffmpeg` utility:
-`ffmpeg -i <source-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <destination-file>`
-
 ```
-{
-    "play": [ "https://example.org/door-close.mp3" ]
-}
+ffmpeg -i <source-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <destination-file>
 ```
 
 ### Acknowledgements

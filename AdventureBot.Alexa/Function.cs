@@ -96,13 +96,14 @@ namespace AdventureBot.Alexa {
 
                 // load adventure from S3
                 string source;
-                using(var s3Response = await _s3Client.GetObjectAsync(_adventureFileBucket, _adventureFileKey)) {
-                    if(s3Response.HttpStatusCode != HttpStatusCode.OK) {
-                        throw new Exception($"unable to load file from 's3://{_adventureFileBucket}/{_adventureFileKey}'");
+                try {
+                    using(var s3Response = await _s3Client.GetObjectAsync(_adventureFileBucket, _adventureFileKey)) {
+                        var memory = new MemoryStream();
+                        await s3Response.ResponseStream.CopyToAsync(memory);
+                        source = Encoding.UTF8.GetString(memory.ToArray());
                     }
-                    var memory = new MemoryStream();
-                    await s3Response.ResponseStream.CopyToAsync(memory);
-                    source = Encoding.UTF8.GetString(memory.ToArray());
+                } catch(AmazonS3Exception e) when(e.StatusCode == HttpStatusCode.NotFound) {
+                    throw new Exception($"unable to load file from 's3://{_adventureFileBucket}/{_adventureFileKey}'");
                 }
 
                 // process adventure file
@@ -227,7 +228,7 @@ namespace AdventureBot.Alexa {
 
                     // check if a session can be restored from the database
                     var record = await _dynamoClient.GetItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
-                        ["Id"] = new AttributeValue { S = recordId }
+                        ["PlayerId"] = new AttributeValue { S = recordId }
                     });
                     if(record.IsItemSet) {
                         LogInfo("restored player from session table");
@@ -284,7 +285,7 @@ namespace AdventureBot.Alexa {
             if(_adventurePlayerTable != null) {
                 LogInfo("storing player in session table");
                 await _dynamoClient.PutItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = state.RecordId },
+                    ["PlayerId"] = new AttributeValue { S = state.RecordId },
                     ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(state, Formatting.None) },
                     ["Expire"] = new AttributeValue { N = ToEpoch(DateTime.UtcNow.AddDays(30)).ToString() }
                 });

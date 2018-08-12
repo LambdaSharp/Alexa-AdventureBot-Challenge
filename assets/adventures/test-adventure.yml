@@ -1,0 +1,42 @@
+places:
+    start:
+        description: This is the start room description.
+        instructions: 'You can say any of the following: 1 through 9, yes, no, describe, hint, or restart.'
+        choices:
+            one:
+                - say: You selected option 1.
+                - goto: other-room
+            two:
+                - say: You selected option 2.
+            three:
+                - say: You selected option 3.
+            four:
+                - say: You selected option 4.
+            five:
+                - say: You selected option 5.
+            six:
+                - say: You selected option 6.
+            seven:
+                - say: You selected option 7.
+            eight:
+                - say: You selected option 8.
+            nine:
+                - say: You selected option 9.
+            yes:
+                - say: You selected yes.
+            no:
+                - say: You selected no.
+            describe:
+                - say: You selected describe.
+            help:
+                - say: You selected help.
+            hint:
+                - say: You selected hint.
+    other-room:
+        description: This is the other room description.
+        instructions: Would you like to go back to the first room?
+        choices:
+            yes:
+                - goto: start
+            no:
+                - say: "Looks like we're enjoying the view!"

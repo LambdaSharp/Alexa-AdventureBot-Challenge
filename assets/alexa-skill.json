@@ -1,7 +1,7 @@
 {
   "interactionModel": {
       "languageModel": {
-          "invocationName": "",
+          "invocationName": "adventure bot",
           "intents": [
               {
                   "name": "AMAZON.FallbackIntent",

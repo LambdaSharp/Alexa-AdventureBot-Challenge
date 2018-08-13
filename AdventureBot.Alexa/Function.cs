@@ -1,25 +1,22 @@
 /*
- * MIT License
+ * MindTouch λ#
+ * Copyright (C) 2018 MindTouch, Inc.
+ * www.mindtouch.com  oss@mindtouch.com
  *
- * Copyright (c) 2017 Steve Bjorg
+ * For community documentation and downloads visit mindtouch.com;
+ * please review the licensing section.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 using System;
@@ -39,6 +36,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Lambda.Core;
 using Amazon.S3;
 using Amazon.SimpleNotificationService;
+using MindTouch.LambdaSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -46,372 +44,306 @@ using Newtonsoft.Json.Linq;
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace AdventureBot.Alexa {
-    public class Function {
+
+    public class Function : ALambdaFunction<SkillRequest, SkillResponse> {
 
         //--- Constants ---
         private const string PROMPT_WELCOME = "Welcome to your new adventure!";
-        private const string PROMPT_RESUME = "Would you like to continue your previous adventure?";
+        private const string PROMPT_WELCOME_BACK = "Welcome back to your adventure!";
         private const string PROMPT_MISUNDERSTOOD = "Sorry, I didn't understand your response.";
         private const string PROMPT_GOODBYE = "Good bye.";
-
-        //--- Class Methods ---
-        private static string ReadTextFromS3(AmazonS3Client s3Client, string bucket, string filepath) {
-            try {
-                using(var response = s3Client.GetObjectAsync(bucket, filepath).Result) {
-                    if(response.HttpStatusCode != HttpStatusCode.OK) {
-                        throw new Exception($"unable to load file from 's3://{bucket}/{filepath}'");
-                    }
-                    var memory = new MemoryStream();
-                    response.ResponseStream.CopyTo(memory);
-                    return Encoding.UTF8.GetString(memory.ToArray());
-                }
-            } catch(Exception e) {
-                LambdaLogger.Log($"*** EXCEPTION: {e}\n");
-                return null;
-            }
-        }
-
-        private static string UserIdToSessionRecordKey(string userId) {
-            var md5 = System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(userId));
-            return $"resume-{new Guid(md5):N}";
-        }
-
-        private static uint ToEpoch(DateTime date) {
-            return  (uint)date.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
-        }
+        private const string PROMPT_OOPS = "Oops, something went wrong. Please try again.";
+        private const string SESSION_STATE_KEY = "adventure-state";
 
         //--- Fields ---
-        private readonly AmazonS3Client _s3Client;
-        private readonly AmazonSimpleNotificationServiceClient _snsClient;
-        private readonly AmazonDynamoDBClient _dynamoClient;
-        private readonly string _adventureFileBucket;
-        private readonly string _adventureFilePath;
-        private readonly string _tableName;
-        private readonly string _gameFinishedTopic;
+        private AmazonS3Client _s3Client;
+        private AmazonSimpleNotificationServiceClient _snsClient;
+        private AmazonDynamoDBClient _dynamoClient;
+        private string _adventureFileBucket;
+        private string _adventureFileKey;
+        private string _adventureSoundFilesPublicUrl;
+        private string _adventurePlayerTable;
+        private string _adventurePlayerFinishedTopic;
 
-        //--- Constructors ---
-        public Function() {
-
-            // read function settings
-            var adventureFile = System.Environment.GetEnvironmentVariable("adventure_file");
-            if(Uri.TryCreate(adventureFile, UriKind.Absolute, out Uri adventureFileUrl)) {
-                _adventureFileBucket = adventureFileUrl.Host;
-                _adventureFilePath = adventureFileUrl.AbsolutePath.Trim('/');
-            }
-            _tableName = System.Environment.GetEnvironmentVariable("sessions_table_name");
-            _gameFinishedTopic = System.Environment.GetEnvironmentVariable("game_finished_topic");
+        //--- Methods ---
+        public override Task InitializeAsync(LambdaConfig config) {
 
             // initialize clients
             _s3Client = new AmazonS3Client();
             _snsClient = new AmazonSimpleNotificationServiceClient();
             _dynamoClient = new AmazonDynamoDBClient();
+
+            // read location of adventure files
+            var adventureFiles = new Uri(config.ReadText("AdventureFiles"));
+            _adventureFileBucket = adventureFiles.Host;
+            _adventureFileKey = adventureFiles.AbsolutePath.TrimStart('/') + config.ReadText("AdventureFile");
+            LogInfo($"ADVENTURE_FILE = s3://{_adventureFileBucket}/{_adventureFileKey}");
+
+            // read location of sound files
+            var adventureSoundFiles = new Uri(config.ReadText("SoundFiles"));
+            _adventureSoundFilesPublicUrl = $"https://{adventureSoundFiles.Host}.s3.amazonaws.com{adventureSoundFiles.AbsolutePath}";
+            LogInfo($"SOUND_FILES = {_adventureSoundFilesPublicUrl}");
+
+            // read topic ARN for sending notifications
+            _adventurePlayerFinishedTopic = config.ReadText("AdventureFinishedTopic");
+
+            // read DynamoDB name for player state
+            _adventurePlayerTable = config.ReadText("PlayerTable");
+            return Task.CompletedTask;
         }
 
-        //--- Methods ---
-        public SkillResponse FunctionHandler(SkillRequest skill, ILambdaContext context) {
-
-            // validate configuration
-            var source = ReadTextFromS3(_s3Client, _adventureFileBucket, _adventureFilePath);
-            if(source == null) {
-                return ResponseBuilder.Tell(new PlainTextOutputSpeech {
-                    Text = "There was an error loading the adventure file. " +
-                        "Make sure the lambda function is properly configured and the adventure file is publicly accessible."
-                });
-            }
-
-            // load adventure from S3
-            Game game;
+        public override async Task<SkillResponse> ProcessMessageAsync(SkillRequest skill, ILambdaContext context) {
             try {
-                game = GameLoader.Parse(source);
-            } catch(Exception e) {
-                LambdaLogger.Log($"*** EXCEPTION: {e}\n");
-                return ResponseBuilder.Tell(new PlainTextOutputSpeech {
-                    Text = "There was an error parsing the adventure file. " +
-                        "Make sure the adventure file is properly formatted."
-                });
-            }
 
-            // restore player object from session
-            var player = RestoreGamePlayer(game, skill.Session);
-            LambdaLogger.Log($"*** INFO: player status: {player.Status}\n");
+                // load adventure from S3
+                string source;
+                try {
+                    using(var s3Response = await _s3Client.GetObjectAsync(_adventureFileBucket, _adventureFileKey)) {
+                        var memory = new MemoryStream();
+                        await s3Response.ResponseStream.CopyToAsync(memory);
+                        source = Encoding.UTF8.GetString(memory.ToArray());
+                    }
+                } catch(AmazonS3Exception e) when(e.StatusCode == HttpStatusCode.NotFound) {
+                    throw new Exception($"unable to load file from 's3://{_adventureFileBucket}/{_adventureFileKey}'");
+                }
 
-            // decode skill request
-            IEnumerable<AGameResponse> responses;
-            IEnumerable<AGameResponse> reprompt = null;
-            switch(skill.Request) {
+                // process adventure file
+                var adventure = Adventure.Parse(source, Path.GetExtension(_adventureFileKey));
 
-            // skill was activated without an intent
-            case LaunchRequest launch:
-                LambdaLogger.Log($"*** INFO: launch\n");
+                // restore player object from session
+                var state = await RestoreAdventureState(adventure, skill.Session);
+                var engine = new AdventureEngine(adventure, state);
+                LogInfo($"player status: {state.Status}");
 
-                // check status of player
-                switch(player.Status) {
-                case GamePlayerStatus.InProgress:
-                default:
+                // decode skill request
+                IOutputSpeech response = null;
+                IOutputSpeech reprompt = null;
+                switch(skill.Request) {
 
-                    // unknown status, pretend player is in a new state and continue
-                    player.Status = GamePlayerStatus.New;
-                    goto case GamePlayerStatus.New;
-                case GamePlayerStatus.New:
+                // skill was activated without an intent
+                case LaunchRequest launch:
+                    LogInfo("launch");
 
                     // kick off the adventure!
-                    player.Status = GamePlayerStatus.InProgress;
-                    responses = new [] { new GameResponseSay(PROMPT_WELCOME) }
-                        .Concat(game.TryDo(player, GameCommandType.Restart));
-                    reprompt = game.TryDo(player, GameCommandType.Help);
+                    if(state.Status == AdventureStatus.New) {
+                        state.Status = AdventureStatus.InProgress;
+                        response = Do(engine, AdventureCommandType.Restart, new XElement("speak", new XElement("p", new XText(PROMPT_WELCOME))));
+                    } else {
+                        response = Do(engine, AdventureCommandType.Describe, new XElement("speak", new XElement("p", new XText(PROMPT_WELCOME_BACK))));
+                    }
+                    reprompt = Do(engine, AdventureCommandType.Help);
                     break;
-                case GamePlayerStatus.Restored:
 
-                    // ask player if the game session should be restored from the database
-                    responses = new[] { new GameResponseSay(PROMPT_RESUME) };
-                    reprompt = responses;
-                    break;
-                }
-                break;
-
-            // skill was activated with an intent
-            case IntentRequest intent:
-                var isGameCommand = Enum.TryParse(intent.Intent.Name, true, out GameCommandType command);
-
-                // check status of player
-                switch(player.Status) {
-                default:
-
-                    // unknown status, pretend player is in a new state and continue
-                    player.Status = GamePlayerStatus.New;
-                    goto case GamePlayerStatus.New;
-                case GamePlayerStatus.New:
-
-                    // adventure is in progress, mark player status accordingly
-                    player.Status = GamePlayerStatus.InProgress;
-                    goto case GamePlayerStatus.InProgress;
-                case GamePlayerStatus.InProgress:
+                // skill was activated with an intent
+                case IntentRequest intent:
+                    var isAdventureCommand = Enum.TryParse(intent.Intent.Name, true, out AdventureCommandType command);
 
                     // check if the intent is an adventure intent
-                    if(isGameCommand) {
-                        LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
-                        responses = game.TryDo(player, command);
-                        reprompt = game.TryDo(player, GameCommandType.Help);
+                    if(isAdventureCommand) {
+                        LogInfo($"adventure intent ({intent.Intent.Name})");
+                        response = Do(engine, command);
+                        reprompt = Do(engine, AdventureCommandType.Help);
                     } else {
-                        switch(intent.Intent.Name) {
 
                         // built-in intents
-                        case BuiltInIntent.Help:
-                            LambdaLogger.Log($"*** INFO: built-in help intent ({intent.Intent.Name})\n");
-                            responses = game.TryDo(player, GameCommandType.Help);
-                            reprompt = game.TryDo(player, GameCommandType.Help);
-                            break;
-
-                        case BuiltInIntent.Stop:
-                        case BuiltInIntent.Cancel:
-                            LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
-                            responses = game.TryDo(player, GameCommandType.Quit);
-                            break;
-
-                        // unknown & unsupported intents
-                        default:
-                            LambdaLogger.Log("*** WARNING: intent not recognized\n");
-                            responses = new[] { new GameResponseNotUnderstood() };
-                            reprompt = game.TryDo(player, GameCommandType.Help);
-                            break;
-                        }
-                    }
-                    break;
-                case GamePlayerStatus.Restored:
-
-                    // check if the intent is an adventure intent
-                    if(isGameCommand) {
-                        LambdaLogger.Log($"*** INFO: adventure intent ({intent.Intent.Name})\n");
-                        switch(command) {
-                        case GameCommandType.Yes:
-                            player.Status = GamePlayerStatus.InProgress;
-                            responses = game.TryDo(player, GameCommandType.Describe);
-                            reprompt = game.TryDo(player, GameCommandType.Help);
-                            break;
-                        case GameCommandType.No:
-                            player.Status = GamePlayerStatus.InProgress;
-                            responses = game.TryDo(player, GameCommandType.Restart);
-                            reprompt = game.TryDo(player, GameCommandType.Help);
-                            break;
-                        default:
-
-                            // unexpected response; ask again
-                            responses = new[] { new GameResponseSay(PROMPT_MISUNDERSTOOD + " " + PROMPT_RESUME) };
-                            reprompt = new[] { new GameResponseSay(PROMPT_RESUME) };
-                            break;
-                        }
-                    } else {
                         switch(intent.Intent.Name) {
-
-                        // built-in intents
+                        case BuiltInIntent.Help:
+                            LogInfo($"built-in help intent ({intent.Intent.Name})");
+                            response = Do(engine, AdventureCommandType.Help);
+                            reprompt = Do(engine, AdventureCommandType.Help);
+                            break;
                         case BuiltInIntent.Stop:
                         case BuiltInIntent.Cancel:
-                            LambdaLogger.Log($"*** INFO: built-in stop/cancel intent ({intent.Intent.Name})\n");
-                            responses = game.TryDo(player, GameCommandType.Quit);
+                            LogInfo($"built-in stop/cancel intent ({intent.Intent.Name})");
+                            response = Do(engine, AdventureCommandType.Quit);
                             break;
-
-                        // unknown & unsupported intents
-                        case BuiltInIntent.Help:
                         default:
-                            LambdaLogger.Log("*** WARNING: intent not recognized\n");
 
-                            // unexpected response; ask again
-                            responses = new[] { new GameResponseSay(PROMPT_MISUNDERSTOOD + " " + PROMPT_RESUME) };
-                            reprompt = new[] { new GameResponseSay(PROMPT_RESUME) };
+                            // unknown & unsupported intents
+                            LogWarn("intent not recognized");
+                            response = new PlainTextOutputSpeech {
+                                Text = PROMPT_MISUNDERSTOOD
+                            };
+                            reprompt = Do(engine, AdventureCommandType.Help);
                             break;
                         }
                     }
                     break;
-                }
-                break;
 
-            // skill session ended (no response expected)
-            case SessionEndedRequest ended:
-                LambdaLogger.Log("*** INFO: session ended\n");
-                return ResponseBuilder.Empty();
+                // skill session ended (no response expected)
+                case SessionEndedRequest ended:
+                    LogInfo("session ended");
+                    return ResponseBuilder.Empty();
 
-            // exception reported on previous response (no response expected)
-            case SystemExceptionRequest error:
-                LambdaLogger.Log("*** INFO: system exception\n");
-                LambdaLogger.Log($"*** EXCEPTION: skill request: {JsonConvert.SerializeObject(skill)}\n");
-                return ResponseBuilder.Empty();
+                // exception reported on previous response (no response expected)
+                case SystemExceptionRequest error:
+                    LogWarn($"skill request exception: {JsonConvert.SerializeObject(skill)}");
+                    return ResponseBuilder.Empty();
 
-            // unknown skill received (no response expected)
-            default:
-                LambdaLogger.Log($"*** WARNING: unrecognized skill request: {JsonConvert.SerializeObject(skill)}\n");
-                return ResponseBuilder.Empty();
-            }
-
-            // check if the player reached the end
-            if(game.Places[player.PlaceId].Finished) {
-                player.End = DateTime.UtcNow;
-
-                // send out notification when player reaches the end
-                if(_gameFinishedTopic != null) {
-                    LambdaLogger.Log("*** INFO: sending out player completion information\n");
-                    _snsClient.PublishAsync(_gameFinishedTopic, JsonConvert.SerializeObject(player, Formatting.None)).Wait();
-                }
-            }
-
-            // create/update player record so we can continue in a future session
-            if(_tableName != null) {
-                LambdaLogger.Log("*** INFO: storing player in session table\n");
-                _dynamoClient.PutItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                    ["Id"] = new AttributeValue { S = player.RecordId },
-                    ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(player, Formatting.None) },
-                    ["Expire"] = new AttributeValue { N = ToEpoch(DateTime.UtcNow.AddDays(30)).ToString() }
-                }).Wait();
-            }
-
-            // respond with serialized player state
-            if(reprompt != null) {
-                return ResponseBuilder.Ask(
-                    ConvertToSpeech(responses),
-                    new Reprompt {
-                        OutputSpeech = ConvertToSpeech(reprompt)
-                    },
-                    new Session {
-                        Attributes = new Dictionary<string, object> {
-                            ["player"] = player
-                        }
-                    }
-                );
-            }
-            return ResponseBuilder.Tell(ConvertToSpeech(responses));
-        }
-
-        private IOutputSpeech ConvertToSpeech(IEnumerable<AGameResponse> responses) {
-            var ssml = new XElement("speak");
-            foreach(var response in responses) {
-                switch(response) {
-                case GameResponseSay say:
-                    ssml.Add(new XElement("p", new XText(say.Text)));
-                    break;
-                case GameResponseDelay delay:
-                    ssml.Add(new XElement("break", new XAttribute("time", (int)delay.Delay.TotalMilliseconds + "ms")));
-                    break;
-                case GameResponsePlay play:
-                    ssml.Add(new XElement("audio", new XAttribute("src", play.Url)));
-                    break;
-                case GameResponseNotUnderstood _:
-                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
-                    break;
-                case GameResponseBye _:
-                    ssml.Add(new XElement("p", new XText(PROMPT_GOODBYE)));
-                    break;
-                case null:
-                    LambdaLogger.Log($"ERROR: null response\n");
-                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
-                    break;
+                // unknown skill received (no response expected)
                 default:
-                    LambdaLogger.Log($"ERROR: unknown response: {response.GetType().Name}\n");
-                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
-                    break;
+                    LogWarn($"unrecognized skill request: {JsonConvert.SerializeObject(skill)}");
+                    return ResponseBuilder.Empty();
                 }
+
+                // check if the player reached the end
+                if(adventure.Places[state.CurrentPlaceId].Finished) {
+                    state.End = DateTime.UtcNow;
+
+                    // send out notification when player reaches the end
+                    if(_adventurePlayerFinishedTopic != null) {
+                        LogInfo("sending out player completion information");
+                        await _snsClient.PublishAsync(_adventurePlayerFinishedTopic, JsonConvert.SerializeObject(state, Formatting.None));
+                    }
+                }
+
+                // create/update player record so we can continue in a future session
+                await StoreAdventureState(state);
+
+                // respond with serialized player state
+                if(reprompt != null) {
+                    return ResponseBuilder.Ask(
+                        response,
+                        new Reprompt {
+                            OutputSpeech = reprompt
+                        },
+                        new Session {
+                            Attributes = new Dictionary<string, object> {
+                                [SESSION_STATE_KEY] = state
+                            }
+                        }
+                    );
+                }
+                return ResponseBuilder.Tell(response);
+            } catch(Exception e) {
+                LogError(e, "exception during skill processing");
+                return ResponseBuilder.Tell(new PlainTextOutputSpeech {
+                    Text = PROMPT_OOPS
+                });
             }
-            return new SsmlOutputSpeech {
-                Ssml = ssml.ToString(SaveOptions.DisableFormatting)
-            };
         }
 
-        private GamePlayer RestoreGamePlayer(Game game, Session session) {
+        private async Task<AdventureState> RestoreAdventureState(Adventure adventure, Session session) {
             var recordId = UserIdToSessionRecordKey(session.User.UserId);
-            GamePlayer player = null;
+            AdventureState state = null;
             if(session.New) {
 
-                // check if the player can be restored from the session table
-                if(_tableName != null) {
+                // check if the adventure state can be restored from the player table
+                if(_adventurePlayerTable != null) {
 
                     // check if a session can be restored from the database
-                    var record = _dynamoClient.GetItemAsync(_tableName, new Dictionary<string, AttributeValue> {
-                        ["Id"] = new AttributeValue { S = recordId }
-                    }).Result;
+                    var record = await _dynamoClient.GetItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
+                        ["PlayerId"] = new AttributeValue { S = recordId }
+                    });
                     if(record.IsItemSet) {
-                        LambdaLogger.Log("*** INFO: restored player from session table\n");
-                        player = JsonConvert.DeserializeObject<GamePlayer>(record.Item["State"].S);
-                        player.Status = GamePlayerStatus.Restored;
+                        state = JsonConvert.DeserializeObject<AdventureState>(record.Item["State"].S);
+                        LogInfo($"restored state from player table\n{record.Item["State"].S}");
 
                         // check if the place the player was in still exists or if the player had reached an end state
-                        if(!game.Places.TryGetValue(player.PlaceId, out GamePlace place)) {
-                            LambdaLogger.Log($"*** WARNING: unable to find matching place for restored player from session table (value: '{player.PlaceId}')\n");
-                            LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+                        if(!adventure.Places.TryGetValue(state.CurrentPlaceId, out AdventurePlace place)) {
+                            LogWarn($"unable to find matching place for restored state from player table (value: '{state.CurrentPlaceId}')");
 
                             // reset player
-                            player = null;
+                            state.Reset(Adventure.StartPlaceId);
                         } else if(place.Finished) {
-                            LambdaLogger.Log("*** INFO: restored player had reached end place\n");
+                            LogInfo("restored player had reached end place");
 
                             // reset player
-                            player = null;
+                            state.Reset(Adventure.StartPlaceId);
+                        } else if(state.CurrentPlaceId == Adventure.StartPlaceId) {
+
+                            // reset player
+                            state.Reset(Adventure.StartPlaceId);
                         }
+                    } else {
+                        LogInfo("no previous state found in player table");
                     }
                 }
             } else {
 
                 // attempt to deserialize the player information
-                if(!session.Attributes.TryGetValue("player", out object playerStateValue) || !(playerStateValue is JObject playerState)) {
-                    LambdaLogger.Log($"*** WARNING: unable to find player state in session (type: {playerStateValue?.GetType().Name})\n");
-                    LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+                if(!session.Attributes.TryGetValue(SESSION_STATE_KEY, out object playerStateValue) || !(playerStateValue is JObject playerState)) {
+                    LogWarn($"unable to find player state in session (type: {playerStateValue?.GetType().Name})\n" + JsonConvert.SerializeObject(session));
                 } else {
-                    player = playerState.ToObject<GamePlayer>();
+                    state = playerState.ToObject<AdventureState>();
 
-                    // validate the game still has a matching place for the player
-                    if(!game.Places.ContainsKey(player.PlaceId)) {
-                        LambdaLogger.Log($"*** WARNING: unable to find matching place for restored player in session (value: '{player.PlaceId}')\n");
-                        LambdaLogger.Log(JsonConvert.SerializeObject(session) + "\n");
+                    // validate the adventure still has a matching place for the player
+                    if(!adventure.Places.ContainsKey(state.CurrentPlaceId)) {
+                        LogWarn($"unable to find matching place for restored player in session (value: '{state.CurrentPlaceId}')\n" + JsonConvert.SerializeObject(session));
 
                         // reset player
-                        player = null;
+                        state.Reset(Adventure.StartPlaceId);
                     }
                 }
             }
 
             // create new player if no player was restored
-            if(player == null) {
-                LambdaLogger.Log("*** INFO: new player session started\n");
-                player = new GamePlayer(recordId, Game.StartPlaceId);
+            if(state == null) {
+                LogInfo("new player session started");
+                state = new AdventureState(recordId, Adventure.StartPlaceId);
             }
-            return player;
+            return state;
+
+            // local functions
+            string UserIdToSessionRecordKey(string userId) {
+                var md5 = System.Security.Cryptography.MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(userId));
+                return $"resume-{new Guid(md5):N}";
+            }
+        }
+
+        private async Task StoreAdventureState(AdventureState state) {
+            if(_adventurePlayerTable != null) {
+                var jsonState = JsonConvert.SerializeObject(state, Formatting.None);
+                LogInfo($"storing state in player table\n{jsonState}");
+                await _dynamoClient.PutItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
+                    ["PlayerId"] = new AttributeValue { S = state.RecordId },
+                    ["State"] = new AttributeValue { S = jsonState },
+                    ["Expire"] = new AttributeValue { N = ToEpoch(DateTime.UtcNow.AddDays(30)).ToString() }
+                });
+            }
+
+            // local functions
+            uint ToEpoch(DateTime date) {
+                return  (uint)date.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+            }
+        }
+
+        private IOutputSpeech Do(AdventureEngine engine, AdventureCommandType command, XElement ssml = null) {
+            ssml = ssml ?? new XElement("speak");
+            ProcessResponse(engine.Do(command));
+            return new SsmlOutputSpeech {
+                Ssml = ssml.ToString(SaveOptions.DisableFormatting)
+            };
+
+            // local functions
+            void ProcessResponse(AAdventureResponse response) {
+                switch(response) {
+                case AdventureResponseSay say:
+                    ssml.Add(new XElement("p", new XText(say.Text)));
+                    break;
+                case AdventureResponseDelay delay:
+                    ssml.Add(new XElement("break", new XAttribute("time", (int)delay.Delay.TotalMilliseconds + "ms")));
+                    break;
+                case AdventureResponsePlay play:
+                    ssml.Add(new XElement("audio", new XAttribute("src", _adventureSoundFilesPublicUrl + play.Name)));
+                    break;
+                case AdventureResponseNotUnderstood _:
+                    ssml.Add(new XElement("p", new XText(PROMPT_MISUNDERSTOOD)));
+                    break;
+                case AdventureResponseBye _:
+                    ssml.Add(new XElement("p", new XText(PROMPT_GOODBYE)));
+                    break;
+                case AdventureResponseFinished _:
+                    break;
+                case AdventureResponseMultiple multiple:
+                    foreach(var nestedResponse in multiple.Responses) {
+                        ProcessResponse(nestedResponse);
+                    }
+                    break;
+                default:
+                    throw new AdventureException($"Unknown response type: {response?.GetType().FullName}");
+                }
+            }
         }
     }
 }

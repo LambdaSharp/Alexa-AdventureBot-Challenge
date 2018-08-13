@@ -1,134 +1,140 @@
 ﻿/*
- * MIT License
+ * MindTouch λ#
+ * Copyright (C) 2018 MindTouch, Inc.
+ * www.mindtouch.com  oss@mindtouch.com
  *
- * Copyright (c) 2017 Steve Bjorg
+ * For community documentation and downloads visit mindtouch.com;
+ * please review the licensing section.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using AdventureBot;
+using McMaster.Extensions.CommandLineUtils;
 
-namespace AventureBot.Cli {
+namespace AdventureBot.Cli {
 
     public class Program {
 
         //--- Class Methods ---
         public static void Main(string[] args) {
+            var app = new CommandLineApplication {
+                Name = "AdventureBot.Cli",
+                FullName = "AdventureBot Command Line Interface",
+                Description = "Choose-Your-Adventure CLI"
+            };
+            app.HelpOption();
+            var filenameArg = app.Argument("<FILENAME>", "path to adventure file");
+            app.OnExecute(() => {
+                if(filenameArg.Value == null) {
+                    Console.WriteLine(app.GetHelpText());
+                    return;
+                }
+                if(!File.Exists(filenameArg.Value)) {
+                    app.ShowRootCommandFullNameAndVersion();
+                    Console.WriteLine("ERROR: could not find file");
+                    return;
+                }
 
-            // check if a filepath to an adventure file was provided and that the file exists
-            if(args.Length != 1) {
-                Console.WriteLine("ERROR: missing path to adventure file.");
-                return;
-            }
-            if(!File.Exists(args[0])) {
-                Console.WriteLine("ERROR: cannot find file.");
-                return;
-            }
+                // initialize the adventure from the adventure file
+                Adventure adventure;
+                try {
+                    adventure = Adventure.LoadFrom(filenameArg.Value);
+                } catch(AdventureException e) {
+                    Console.WriteLine($"ERROR: {e.Message}");
+                    return;
+                } catch(Exception e) {
+                    Console.WriteLine($"ERROR: unable to load file");
+                    Console.WriteLine(e);
+                    return;
+                }
 
-            // initialize the game from the adventure file
-            Game game;
-            GamePlayer player;
-            try {
-                game = GameLoader.LoadFrom(args[0]);
-                player = new GamePlayer("cli", Game.StartPlaceId);
-            } catch(GameLoaderException e) {
-                Console.WriteLine($"ERROR: {e.Message}");
-                return;
-            } catch(Exception e) {
-                Console.WriteLine($"ERROR: unable to load file");
-                Console.WriteLine(e);
-                return;
-            }
-            Console.Clear();
+                // invoke adventure
+                var state = new AdventureState("cli", Adventure.StartPlaceId);
+                var engine = new AdventureEngine(adventure, state);
+                AdventureLoop(engine);
+            });
+            app.Execute(args);
+        }
 
-            // start the game loop
-            var responses = game.Do(player, GameCommandType.Restart);
+        private static void AdventureLoop(AdventureEngine engine) {
+
+            // start the adventure loop
+            ProcessResponse(engine.Do(AdventureCommandType.Restart));
             try {
                 while(true) {
-                    if(PlayResponses(responses)) {
-                        return;
-                    }
 
                     // prompt user input
                     Console.Write("> ");
                     var commandText = Console.ReadLine().Trim().ToLower();
-                    if(!Enum.TryParse(commandText, true, out GameCommandType command)) {
-                        responses = new[] { new GameResponseNotUnderstood() };
+                    if(!Enum.TryParse(commandText, true, out AdventureCommandType command)) {
+
+                        // TODO (2017-07-21, bjorg): need a way to invoke a 'command not understood' reaction
+                        // responses = new[] { new AdventureResponseNotUnderstood() };
                         continue;
                     }
 
                     // process user input
-                    responses = game.Do(player, command);
+                    ProcessResponse(engine.Do(command));
                 }
             } catch(Exception e) {
                 Console.Error.WriteLine(e);
             }
-        }
 
-        private static bool PlayResponses(IEnumerable<AGameResponse> responses) {
-            var quit = false;
-
-            // process each response
-            foreach(var response in responses) {
+            // local functions
+            void ProcessResponse(AAdventureResponse response) {
                 switch(response) {
-                case GameResponseSay say:
+                case AdventureResponseSay say:
                     TypeLine(say.Text);
                     break;
-                case GameResponseDelay delay:
+                case AdventureResponseDelay delay:
                     System.Threading.Thread.Sleep(delay.Delay);
                     break;
-                case GameResponsePlay play:
-                    Console.WriteLine($"({play.Url})");
+                case AdventureResponsePlay play:
+                    Console.WriteLine($"({play.Name})");
                     break;
-                case GameResponseNotUnderstood _:
+                case AdventureResponseNotUnderstood _:
                     TypeLine("Sorry, I don't know what that means.");
                     break;
-                case GameResponseBye _:
-                    quit = true;
+                case AdventureResponseBye _:
                     TypeLine("Good bye.");
+                    System.Environment.Exit(0);
                     break;
-                case null:
-                    Console.WriteLine($"ERROR: null response");
+                case AdventureResponseFinished _:
+                    break;
+                case AdventureResponseMultiple multiple:
+                    foreach(var nestedResponse in multiple.Responses) {
+                        ProcessResponse(nestedResponse);
+                    }
                     break;
                 default:
-                    Console.WriteLine($"ERROR: unknown response: {response.GetType().Name}");
-                    break;
+                    throw new AdventureException($"Unknown response type: {response?.GetType().FullName}");
                 }
             }
+        }
 
-            // return boolean indicating if one of the response was a good-bye message
-            return quit;
+        private static void TypeLine(string text = "") {
 
-            void TypeLine(string text = "") {
-
-                // write each character with a random delay to give the text output a typewriter feel
-                var random = new Random();
-                foreach(var c in text) {
-                    System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
-                    Console.Write(c);
-                }
-                Console.WriteLine();
+            // write each character with a random delay to give the text output a typewriter feel
+            var random = new Random();
+            foreach(var c in text) {
+                System.Threading.Thread.Sleep((int)(random.NextDouble() * 10));
+                Console.Write(c);
             }
+            Console.WriteLine();
         }
     }
 }

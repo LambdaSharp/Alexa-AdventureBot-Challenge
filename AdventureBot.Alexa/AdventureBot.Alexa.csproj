@@ -15,7 +15,7 @@
     <PackageReference Include="AWSSDK.S3" Version="3.3.20"/>
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.10.4"/>
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.1.4"/>
-    <PackageReference Include="MindTouch.LambdaSharp" Version="0.2.0-rc1"/>
+    <PackageReference Include="MindTouch.LambdaSharp" Version="0.2.0"/>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2"/>
   </ItemGroup>
   <ItemGroup>

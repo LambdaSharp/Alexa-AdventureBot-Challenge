@@ -15,7 +15,7 @@ The following tools and accounts are required to complete these instructions.
 ## LEVEL 0 - Run Command Line Version
 
 1. Clone or download the GitHub repository: `https://github.com/LambdaSharp/Alexa-AdventureBot-Challenge`
-1. Change folder the command line project: `cd Alexa-AdventureBot-Challenge/AdventureBot.Cli`
+1. Change folder to the command line project: `cd Alexa-AdventureBot-Challenge/AdventureBot.Cli`
 1. Run app with a sample file: `dotnet run ../assets/adventures/my-demo-adventure.yml`
     * **NOTE**: type `quit` to exit
 

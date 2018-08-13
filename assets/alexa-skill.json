@@ -1,151 +1,161 @@
 {
-  "intents": [
-    {
-      "name": "AMAZON.CancelIntent",
-      "samples": []
-    },
-    {
-      "name": "AMAZON.HelpIntent",
-      "samples": []
-    },
-    {
-      "name": "AMAZON.StopIntent",
-      "samples": [
-        "quit",
-        "leave",
-        "exit"
-      ]
-    },
-    {
-      "name": "Describe",
-      "samples": [
-        "describe",
-        "describe room",
-        "where am i",
-        "what do i see",
-        "describe where i am",
-        "repeat"
-      ],
-      "slots": []
-    },
-    {
-      "name": "Hint",
-      "samples": [
-        "hint",
-        "what now",
-        "what should i do",
-        "any hint",
-        "where should i go"
-      ],
-      "slots": []
-    },
-    {
-      "name": "No",
-      "samples": [
-        "no",
-        "nay"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionEight",
-      "samples": [
-        "eight",
-        "option eight",
-        "eighth option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionFive",
-      "samples": [
-        "five",
-        "option five",
-        "fifth option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionFour",
-      "samples": [
-        "four",
-        "option four",
-        "fourth option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionNine",
-      "samples": [
-        "nine",
-        "option nine",
-        "ninth option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionOne",
-      "samples": [
-        "one",
-        "option one",
-        "first option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionSeven",
-      "samples": [
-        "seven",
-        "option seven",
-        "seventh option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionSix",
-      "samples": [
-        "six",
-        "option six",
-        "sixth option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionThree",
-      "samples": [
-        "three",
-        "option three",
-        "third option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "OptionTwo",
-      "samples": [
-        "two",
-        "option two",
-        "second option"
-      ],
-      "slots": []
-    },
-    {
-      "name": "Restart",
-      "samples": [
-        "restart",
-        "start over",
-        "begin adventure",
-        "restart adventure",
-        "do adventure again"
-      ],
-      "slots": []
-    },
-    {
-      "name": "Yes",
-      "samples": [
-        "yes",
-        "yay"
-      ],
-      "slots": []
-    }
-  ]
+  "interactionModel": {
+      "languageModel": {
+          "invocationName": "",
+          "intents": [
+              {
+                  "name": "AMAZON.FallbackIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.CancelIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.HelpIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.StopIntent",
+                  "samples": [
+                    "quit",
+                    "leave",
+                    "exit"
+                  ]
+              },
+              {
+                "name": "Describe",
+                "samples": [
+                  "describe",
+                  "describe room",
+                  "where am i",
+                  "what do i see",
+                  "describe where i am",
+                  "repeat"
+                ],
+                "slots": []
+              },
+              {
+                "name": "Hint",
+                "samples": [
+                  "hint",
+                  "what now",
+                  "what should i do",
+                  "any hint",
+                  "where should i go"
+                ],
+                "slots": []
+              },
+              {
+                "name": "No",
+                "samples": [
+                  "no",
+                  "nay"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionEight",
+                "samples": [
+                  "eight",
+                  "option eight",
+                  "eighth option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionFive",
+                "samples": [
+                  "five",
+                  "option five",
+                  "fifth option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionFour",
+                "samples": [
+                  "four",
+                  "option four",
+                  "fourth option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionNine",
+                "samples": [
+                  "nine",
+                  "option nine",
+                  "ninth option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionOne",
+                "samples": [
+                  "one",
+                  "option one",
+                  "first option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionSeven",
+                "samples": [
+                  "seven",
+                  "option seven",
+                  "seventh option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionSix",
+                "samples": [
+                  "six",
+                  "option six",
+                  "sixth option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionThree",
+                "samples": [
+                  "three",
+                  "option three",
+                  "third option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "OptionTwo",
+                "samples": [
+                  "two",
+                  "option two",
+                  "second option"
+                ],
+                "slots": []
+              },
+              {
+                "name": "Restart",
+                "samples": [
+                  "restart",
+                  "start over",
+                  "begin adventure",
+                  "restart adventure",
+                  "do adventure again"
+                ],
+                "slots": []
+              },
+              {
+                "name": "Yes",
+                "samples": [
+                  "yes",
+                  "yay"
+                ],
+                "slots": []
+              }
+          ],
+          "types": []
+      }
+  }
 }

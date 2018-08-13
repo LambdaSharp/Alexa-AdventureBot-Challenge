@@ -49,6 +49,7 @@ namespace AdventureBot.Alexa {
 
         //--- Constants ---
         private const string PROMPT_WELCOME = "Welcome to your new adventure!";
+        private const string PROMPT_WELCOME_BACK = "Welcome back to your adventure!";
         private const string PROMPT_MISUNDERSTOOD = "Sorry, I didn't understand your response.";
         private const string PROMPT_GOODBYE = "Good bye.";
         private const string PROMPT_OOPS = "Oops, something went wrong. Please try again.";
@@ -107,7 +108,7 @@ namespace AdventureBot.Alexa {
                 }
 
                 // process adventure file
-                Adventure adventure = Adventure.Parse(source, Path.GetExtension(_adventureFileKey));
+                var adventure = Adventure.Parse(source, Path.GetExtension(_adventureFileKey));
 
                 // restore player object from session
                 var state = await RestoreAdventureState(adventure, skill.Session);
@@ -124,8 +125,12 @@ namespace AdventureBot.Alexa {
                     LogInfo("launch");
 
                     // kick off the adventure!
-                    state.Status = AdventureStatus.InProgress;
-                    response = Do(engine, AdventureCommandType.Restart, new XElement("ssml", new XElement("p", new XText(PROMPT_WELCOME))));
+                    if(state.Status == AdventureStatus.New) {
+                        state.Status = AdventureStatus.InProgress;
+                        response = Do(engine, AdventureCommandType.Restart, new XElement("speak", new XElement("p", new XText(PROMPT_WELCOME))));
+                    } else {
+                        response = Do(engine, AdventureCommandType.Describe, new XElement("speak", new XElement("p", new XText(PROMPT_WELCOME_BACK))));
+                    }
                     reprompt = Do(engine, AdventureCommandType.Help);
                     break;
 
@@ -223,7 +228,7 @@ namespace AdventureBot.Alexa {
             AdventureState state = null;
             if(session.New) {
 
-                // check if the player can be restored from the session table
+                // check if the adventure state can be restored from the player table
                 if(_adventurePlayerTable != null) {
 
                     // check if a session can be restored from the database
@@ -231,13 +236,13 @@ namespace AdventureBot.Alexa {
                         ["PlayerId"] = new AttributeValue { S = recordId }
                     });
                     if(record.IsItemSet) {
-                        LogInfo("restored player from session table");
                         state = JsonConvert.DeserializeObject<AdventureState>(record.Item["State"].S);
                         state.Status = AdventureStatus.InProgress;
+                        LogInfo($"restored state from player table\n{record.Item["State"].S}");
 
                         // check if the place the player was in still exists or if the player had reached an end state
                         if(!adventure.Places.TryGetValue(state.CurrentPlaceId, out AdventurePlace place)) {
-                            LogWarn($"unable to find matching place for restored player from session table (value: '{state.CurrentPlaceId}')");
+                            LogWarn($"unable to find matching place for restored state from player table (value: '{state.CurrentPlaceId}')");
 
                             // reset player
                             state = null;
@@ -247,6 +252,8 @@ namespace AdventureBot.Alexa {
                             // reset player
                             state = null;
                         }
+                    } else {
+                        LogInfo("no previous state found in player table");
                     }
                 }
             } else {
@@ -283,10 +290,11 @@ namespace AdventureBot.Alexa {
 
         private async Task StoreAdventureState(AdventureState state) {
             if(_adventurePlayerTable != null) {
-                LogInfo("storing player in session table");
+                var jsonState = JsonConvert.SerializeObject(state, Formatting.None);
+                LogInfo($"storing state in player table\n{jsonState}");
                 await _dynamoClient.PutItemAsync(_adventurePlayerTable, new Dictionary<string, AttributeValue> {
                     ["PlayerId"] = new AttributeValue { S = state.RecordId },
-                    ["State"] = new AttributeValue { S = JsonConvert.SerializeObject(state, Formatting.None) },
+                    ["State"] = new AttributeValue { S = jsonState },
                     ["Expire"] = new AttributeValue { N = ToEpoch(DateTime.UtcNow.AddDays(30)).ToString() }
                 });
             }
@@ -298,7 +306,7 @@ namespace AdventureBot.Alexa {
         }
 
         private IOutputSpeech Do(AdventureEngine engine, AdventureCommandType command, XElement ssml = null) {
-            ssml = ssml ?? new XElement("ssml");
+            ssml = ssml ?? new XElement("speak");
             ProcessResponse(engine.Do(command));
             return new SsmlOutputSpeech {
                 Ssml = ssml.ToString(SaveOptions.DisableFormatting)

@@ -237,7 +237,6 @@ namespace AdventureBot.Alexa {
                     });
                     if(record.IsItemSet) {
                         state = JsonConvert.DeserializeObject<AdventureState>(record.Item["State"].S);
-                        state.Status = AdventureStatus.InProgress;
                         LogInfo($"restored state from player table\n{record.Item["State"].S}");
 
                         // check if the place the player was in still exists or if the player had reached an end state
@@ -245,12 +244,16 @@ namespace AdventureBot.Alexa {
                             LogWarn($"unable to find matching place for restored state from player table (value: '{state.CurrentPlaceId}')");
 
                             // reset player
-                            state = null;
+                            state.Reset(Adventure.StartPlaceId);
                         } else if(place.Finished) {
                             LogInfo("restored player had reached end place");
 
                             // reset player
-                            state = null;
+                            state.Reset(Adventure.StartPlaceId);
+                        } else if(state.CurrentPlaceId == Adventure.StartPlaceId) {
+
+                            // reset player
+                            state.Reset(Adventure.StartPlaceId);
                         }
                     } else {
                         LogInfo("no previous state found in player table");
@@ -269,7 +272,7 @@ namespace AdventureBot.Alexa {
                         LogWarn($"unable to find matching place for restored player in session (value: '{state.CurrentPlaceId}')\n" + JsonConvert.SerializeObject(session));
 
                         // reset player
-                        state = null;
+                        state.Reset(Adventure.StartPlaceId);
                     }
                 }
             }

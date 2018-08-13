@@ -42,6 +42,14 @@ namespace AdventureBot {
         //--- Constructors ---
         public AdventureState(string recordId, string currentPlaceId) {
             RecordId = recordId;
+            Reset(currentPlaceId);
+        }
+
+        //--- Methods ---
+        public void Reset(string currentPlaceId) {
+            Status = AdventureStatus.New;
+            Start = DateTime.UtcNow;
+            End = null;
             CurrentPlaceId = currentPlaceId;
         }
     }

@@ -220,7 +220,9 @@ namespace AdventureBot.Alexa {
             AdventureState state = null;
 
             // attempt to deserialize the player information
-            if(!session.Attributes.TryGetValue(SESSION_STATE_KEY, out object playerStateValue) || !(playerStateValue is JObject playerState)) {
+            if(session.New) {
+                LogInfo("new session started");
+            } else if(!session.Attributes.TryGetValue(SESSION_STATE_KEY, out object playerStateValue) || !(playerStateValue is JObject playerState)) {
                 LogWarn($"unable to find player state in session (type: {playerStateValue?.GetType().Name})\n" + JsonConvert.SerializeObject(session));
             } else {
                 state = playerState.ToObject<AdventureState>();

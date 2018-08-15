@@ -175,6 +175,12 @@ This part is left as an exercise to the reader.
 
 Modify AdventureBot so that it sends out a SNS message when a player completes an adventure. Track how long it took for the player to complete, how many place where visited, and any other statistics you think would be insightful to understand your players.
 
+<details><summary>SNS Reference</summary>
+
+* [AWS Publish SNS Request Documentation](https://docs.aws.amazon.com/sdkfornet/v3/apidocs/Index.html)
+* [AWS Publish SNS Documentation](https://docs.aws.amazon.com/sdkfornet/v3/apidocs/Index.html)
+</details>
+
 ## LEVEL 4 - Showcase your own Adventure!
 
 This part is left as an exercise to the reader.

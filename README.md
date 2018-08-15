@@ -10,7 +10,7 @@ The following tools and accounts are required to complete these instructions.
 * [Install AWS CLI](https://aws.amazon.com/cli/)
 * [Sign-up for an AWS account](https://aws.amazon.com/)
 * [Sign-up for an Amazon developer account](https://developer.amazon.com/alexa)
-* [Setup LambdaSharp Tool](https://github.com/LambdaSharp/LambdaSharpTool)
+* [Setup LambdaSharp Tool](https://github.com/LambdaSharp/LambdaSharpTool/tree/master/Bootstrap)
 
 ## LEVEL 0 - Run Command Line Version
 
@@ -140,6 +140,7 @@ The following steps set up the Alexa Skill with an invocation name, a predefined
 
 <details><summary>Setup Alexa Skill</summary>
 
+1. [Sign-up for an Amazon developer account](https://developer.amazon.com/alexa)
 1. [Log into the Amazon Developer Console](https://developer.amazon.com/home.html)
 1. Click on the `Alexa` logo
 1. Click on `Alexa Skill Kit` under _Add Capabilities to Alexa_

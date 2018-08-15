@@ -25,12 +25,12 @@ The following tools and accounts are required to complete these instructions.
 
 1. If you haven't already done so, configure your AWS profile using: `aws configure`
     * **NOTE**: AWS Lambda functions for Alexa Skills must be deployed in `us-east-1`
-1. Verify your λ# tool setup by listing the deployed modules: `lash list`
+1. Verify your λ# tool setup by listing the deployed modules: `lash list  --tier Demo`
     * **NOTE**: With the the `LAMBDASHARPTIER` environment variable you can omit the `--tier` command line option.
 
 The following text should appear (or similar):
 ```
-$ lash list
+$ lash list  --tier Demo
 MindTouch LambdaSharp Tool (v0.2) - List LambdaSharp modules
 
 MODULE                        STATUS             DATE
@@ -46,7 +46,7 @@ Found 2 modules for deployment tier 'Demo'
 The AdventureBot code is packaged as a λ# module, which streamlines the creating, configuring, and uploading of assets for serverless applications.
 
 1. Switch to the git checkout folder
-1. Run the λ# tool to deploy AdventureBot: `lash deploy`
+1. Run the λ# tool to deploy AdventureBot: `lash deploy --tier Demo`
 
 Once complete, the λ# tool will have taken care of the following steps for you:
 * Create the AdventureBot Lambda function (`AdventureBot.Alexa`)

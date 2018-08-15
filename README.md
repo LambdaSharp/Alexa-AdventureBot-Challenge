@@ -24,9 +24,16 @@ The following tools and accounts are required to complete these instructions.
 <details><summary>Set AWS Profile and λ# Tool</summary>
 
 1. If you haven't already done so, configure your AWS profile using: `aws configure`
-    * **NOTE**: AWS Lambda functions for Alexa Skills must be deployed in `us-east-1`
+
+> **NOTE**: 
+> 
+> AWS Lambda functions for Alexa Skills must be deployed in `us-east-1`
+
 1. Verify your λ# tool setup by listing the deployed modules: `lash list  --tier Demo`
-    * **NOTE**: With the the `LAMBDASHARPTIER` environment variable you can omit the `--tier` command line option.
+
+> **NOTE**: 
+> 
+> With the the `LAMBDASHARPTIER` environment variable you can omit the `--tier` command line option.
 
 The following text should appear (or similar):
 ```
@@ -66,42 +73,42 @@ Once complete, the λ# tool will have taken care of the following steps for you:
 1. Add the following test event:
     ```json
     {
-    "session": {
-        "new": true,
-        "sessionId": "amzn1.echo-api.session.123",
-        "attributes": {},
-        "user": {
-        "userId": "amzn1.ask.account.123"
-        },
-        "application": {
-        "applicationId": "amzn1.ask.skill.123"
-        }
-    },
-    "version": "1.0",
-    "request": {
-        "locale": "en-US",
-        "timestamp": "2016-10-27T18:21:44Z",
-        "type": "LaunchRequest",
-        "requestId": "amzn1.echo-api.request.123"
-    },
-    "context": {
-        "AudioPlayer": {
-        "playerActivity": "IDLE"
-        },
-        "System": {
-        "device": {
-            "supportedInterfaces": {
-            "AudioPlayer": {}
+        "session": {
+            "new": true,
+            "sessionId": "amzn1.echo-api.session.123",
+            "attributes": {},
+            "user": {
+            "userId": "amzn1.ask.account.123"
+            },
+            "application": {
+            "applicationId": "amzn1.ask.skill.123"
             }
         },
-        "application": {
-            "applicationId": "amzn1.ask.skill.123"
+        "version": "1.0",
+        "request": {
+            "locale": "en-US",
+            "timestamp": "2016-10-27T18:21:44Z",
+            "type": "LaunchRequest",
+            "requestId": "amzn1.echo-api.request.123"
         },
-        "user": {
-            "userId": "amzn1.ask.account.123"
+        "context": {
+            "AudioPlayer": {
+            "playerActivity": "IDLE"
+            },
+            "System": {
+            "device": {
+                "supportedInterfaces": {
+                "AudioPlayer": {}
+                }
+            },
+            "application": {
+                "applicationId": "amzn1.ask.skill.123"
+            },
+            "user": {
+                "userId": "amzn1.ask.account.123"
+            }
+            }
         }
-        }
-    }
     }
     ```
 1. Click Save.
@@ -181,17 +188,18 @@ Modify AdventureBot so that it sends out a SNS message when a player completes a
 * [AWS Publish SNS Documentation](https://docs.aws.amazon.com/sdkfornet/v3/apidocs/Index.html)
 </details>
 
-## LEVEL 4 - Showcase your own Adventure!
+## BOSS LEVEL - Showcase your own Adventure!
 
 This part is left as an exercise to the reader.
 
 Create your own adventure and showcase it!
 
-## BOSS LEVEL - Handle new Players vs. Returning Players differently
+<details><summary>Hint</summary>
 
-This part is left as an exercise to the reader.
+1. Take a look at the `asserts/adventures/my-demo-adventure.yml` file
+1. If you change the name of the file, make sure to update the `AdventureFile` parameter in the `Deploy.yml` file
+</details>
 
-AdventureBot uses Alexa session state to track players through their exploration. However, when the session ends, the player state is lost. Add code to AdventureBot to store the player's state in DynamoDB. Detect at the beginning of a new session if the player has an unfinished adventure and offer to resume or restart instead..
 
 # APPENDIX A - AdventureBot File Format
 

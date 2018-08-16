@@ -17,8 +17,8 @@ The following tools and accounts are required to complete these instructions.
 1. Clone or download the GitHub repository: `https://github.com/LambdaSharp/Alexa-AdventureBot-Challenge`
 1. Change folder to the command line project: `cd Alexa-AdventureBot-Challenge/AdventureBot.Cli`
 1. Run app with a sample file: `dotnet run ../assets/adventures/my-demo-adventure.yml`
-    > **NOTE**: 
-    > 
+    > **NOTE**:
+    >
     > type `quit` to exit
 
 ## LEVEL 1 - Deploy AdventureBot on AWS
@@ -27,14 +27,14 @@ The following tools and accounts are required to complete these instructions.
 
 1. If you haven't already done so, configure your AWS profile using: `aws configure`
 
-    > **NOTE**: 
-    > 
+    > **NOTE**:
+    >
     > AWS Lambda functions for Alexa Skills must be deployed in `us-east-1`
 
 1. Verify your λ# tool setup by listing the deployed modules: `lash list  --tier Demo`
 
-    > **NOTE**: 
-    > 
+    > **NOTE**:
+    >
     > With the the `LAMBDASHARPTIER` environment variable you can omit the `--tier` command line option.
 
 The following text should appear (or similar):
@@ -165,8 +165,8 @@ The following steps set up the Alexa Skill with an invocation name, a predefined
 1. _Endpoint_
     1. Select `AWS Lambda ARN` option
     1. Under `Default Region` paste the Lambda ARN: `arn:aws:lambda:us-east-1:******:function:Demo-AdventureBot-Alexa`
-        > **NOTE**: 
-        > 
+        > **NOTE**:
+        >
         > the Lambda ARN can be found on the top right corner of the AWS Console after selecting the Lambda function
     1. Click `Save Endpoints`
 1. _Test_
@@ -192,7 +192,13 @@ Modify AdventureBot so that it sends out a SNS message when a player completes a
 * [AWS Publish SNS Documentation](https://docs.aws.amazon.com/sdkfornet/v3/apidocs/Index.html)
 </details>
 
-## BOSS LEVEL - Showcase your own Adventure!
+## BOSS LEVEL - Handle new Players vs. Returning Players differently
+
+This part is left as an exercise to the reader.
+
+AdventureBot uses Alexa session state to track players through their exploration. However, when the session ends, the player state is lost. Add code to AdventureBot to store the player's state in DynamoDB. Detect at the beginning of a new session if the player has an unfinished adventure and offer to resume or restart instead.
+
+## BONUS LEVEL - Showcase your own Adventure!
 
 This part is left as an exercise to the reader.
 

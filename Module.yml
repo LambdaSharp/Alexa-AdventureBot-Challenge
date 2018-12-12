@@ -1,83 +1,102 @@
-Name: AdventureBot
-
+Module: AdventureBot
 Version: 1.0
-
 Description: Alexa-based Choose-your-AdventureBot
+Dependencies:
 
-Parameters:
+  - Module: LambdaSharpS3PackageLoader
+    Version: 0.5-WIP
 
-  - Name: AdventureFile
+Entries:
+
+  # Parameters
+
+  # NOTE: Specify your alexa skill id (e.g. amzn1.ask.skill.xxxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  #       to prevent the Lambda function from being invoked by other skills.
+
+  - Parameter: AlexaSkillID
+    Description: Alexa Skill ID
+    Default: "*"
+
+  - Parameter: AdventureFile
+    Scope: "*"
     Description: Name of the adventure file to use
-    Value: my-demo-adventure.yml
+    Default: my-demo-adventure.yml
 
-  - Name: AdventureBucket
-    Description: S3 Bucket for storing adventure assets
-    Resource:
-      Type: AWS::S3::Bucket
-      Allow: ReadWrite
-
-  - Name: AdventureFinishedTopic
-    Description: SNS topic to notify when a player finishes an adventure
-    Resource:
-      Type: AWS::SNS::Topic
-      Allow: Publish
-
-  - Name: AdventureFiles
+  # Upload adventure and sound files
+  - Package: AdventureFilesPackage
     Description: Package of all adventures files to be uploaded to S3 bucket
-    Package:
-      Files: assets/adventures/
-      Bucket: AdventureBucket
-      Prefix: Adventures/
+    Files: assets/adventures/
 
-  - Name: SoundFiles
+  - Resource: AdventureFiles
+    Scope: "*"
+    Type: LambdaSharp::S3::Package
+    Properties:
+      SourceBucketName: !Ref DeploymentBucketName
+      SourcePackageKey: !Ref AdventureFilesPackage
+      DestinationBucketName: !Ref AdventureBucket
+      DestinationKeyPrefix: Adventures/
+
+  - Package: SoundFilesPackage
     Description: Package of all sound files to be uploaded to S3 bucket
-    Package:
-      Files: assets/sounds/*.mp3
-      Bucket: AdventureBucket
-      Prefix: Sounds/
+    Files: assets/sounds/*.mp3
 
-  - Name: SoundFilesPolicy
+  - Resource: SoundFiles
+    Scope: "*"
+    Description: Package of all sound files to be uploaded to S3 bucket
+    Type: LambdaSharp::S3::Package
+    Properties:
+      SourceBucketName: !Ref DeploymentBucketName
+      SourcePackageKey: !Ref SoundFilesPackage
+      DestinationBucketName: !Ref AdventureBucket
+      DestinationKeyPrefix: Sounds/
+
+  - Resource: AdventureFinishedTopic
+    Scope: "*"
+    Description: SNS topic to notify when a player finishes an adventure
+    Type: AWS::SNS::Topic
+    Allow: Publish
+
+  # Create bucket for adventure and sounds files
+  - Resource: AdventureBucket
+    Scope: "*"
+    Description: S3 Bucket for storing adventure assets
+    Type: AWS::S3::Bucket
+    Allow: ReadWrite
+
+  - Resource: SoundFilesPolicy
+    Scope: "*"
     Description: Access policy for sound files in S3 bucket
-    Resource:
-      Type: AWS::S3::BucketPolicy
-      Properties:
-        Bucket:
-          Ref: AdventureBucket
-        PolicyDocument:
-          Statement:
-            - Action:
-                - "s3:GetObject"
-              Effect: Allow
-              Resource:
-                Fn::Join:
-                  - ""
-                  - - "arn:aws:s3:::"
-                    - Ref: AdventureBucket
-                    - "/Sounds/*"
-              Principal: "*"
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AdventureBucket
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "s3:GetObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${AdventureBucket}/Sounds/*"
+            Principal: "*"
 
-  - Name: PlayerTable
+  # Create table for player state
+  - Resource: PlayerTable
+    Scope: "*"
     Description: DynamoDb table for storing player progression in their adventure
-    Resource:
-      Type: AWS::DynamoDB::Table
-      Allow: ReadWrite
-      Properties:
-        AttributeDefinitions:
-          - AttributeName: PlayerId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: PlayerId
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+    Type: AWS::DynamoDB::Table
+    Allow: ReadWrite
+    Pragmas:
+      - skip-property-validation
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PlayerId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PlayerId
+          KeyType: HASH
 
-Functions:
-
-  - Name: Alexa
+  - Function: Alexa
+    Description: Alexa Skill handler for AdventureBot
     Memory: 128
     Timeout: 30
     Sources:
-      # NOTE: Specify your alexa skill id (e.g. amzn1.ask.skill.xxxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-      #       to prevent the Lambda function from being invoked by other skills.
-      - Alexa: "*"
+      - Alexa: !Ref AlexaSkillID

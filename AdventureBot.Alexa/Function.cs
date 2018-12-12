@@ -86,7 +86,7 @@ namespace AdventureBot.Alexa {
             _adventurePlayerFinishedTopic = config.ReadText("AdventureFinishedTopic");
 
             // read DynamoDB name for player state
-            _adventurePlayerTable = config.ReadText("PlayerTable");
+            _adventurePlayerTable = config.ReadDynamoDBTableName("PlayerTable");
             return Task.CompletedTask;
         }
 

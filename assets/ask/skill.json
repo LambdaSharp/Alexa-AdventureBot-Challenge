@@ -1,0 +1,22 @@
+{
+    "manifest": {
+        "publishingInformation": {
+            "locales": {
+                "en-US": {
+                    "name": "AdventureBot"
+                }
+            },
+            "isAvailableWorldwide": true,
+            "distributionCountries": []
+        },
+        "apis": {
+            "custom": {
+                "endpoint": {
+                    "uri": "<ENDPOINT>"
+                },
+                "interfaces": []
+            }
+        },
+        "manifestVersion": "1.0"
+    }
+}

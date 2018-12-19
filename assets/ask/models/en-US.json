@@ -1,0 +1,119 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "adventure bot",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": [
+                        "quit",
+                        "leave",
+                        "exit"
+                    ]
+                },
+                {
+                    "name": "Describe",
+                    "samples": [
+                        "describe"
+                    ]
+                },
+                {
+                    "name": "Hint",
+                    "samples": [
+                        "hint"
+                    ]
+                },
+                {
+                    "name": "No",
+                    "samples": [
+                        "no"
+                    ]
+                },
+                {
+                    "name": "OptionEight",
+                    "samples": [
+                        "eight",
+                        "option eight"
+                    ]
+                },
+                {
+                    "name": "OptionFive",
+                    "samples": [
+                        "five",
+                        "option five"
+                    ]
+                },
+                {
+                    "name": "OptionFour",
+                    "samples": [
+                        "four",
+                        "option four"
+                    ]
+                },
+                {
+                    "name": "OptionNine",
+                    "samples": [
+                        "nine",
+                        "option nine"
+                    ]
+                },
+                {
+                    "name": "OptionOne",
+                    "samples": [
+                        "one",
+                        "option one"
+                    ]
+                },
+                {
+                    "name": "OptionSeven",
+                    "samples": [
+                        "seven",
+                        "option seven"
+                    ]
+                },
+                {
+                    "name": "OptionSix",
+                    "samples": [
+                        "six",
+                        "option six"
+                    ]
+                },
+                {
+                    "name": "OptionThree",
+                    "samples": [
+                        "three",
+                        "option three"
+                    ]
+                },
+                {
+                    "name": "OptionTwo",
+                    "samples": [
+                        "two",
+                        "option two"
+                    ]
+                },
+                {
+                    "name": "Restart",
+                    "samples": [
+                        "restart",
+                        "start over"
+                    ]
+                },
+                {
+                    "name": "Yes",
+                    "samples": [
+                        "yes"
+                    ]
+                }
+            ]
+        }
+    }
+}

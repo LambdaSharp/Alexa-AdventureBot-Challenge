@@ -1,34 +1,41 @@
 Module: AdventureBot
 Version: 1.0
 Description: Alexa-based Choose-your-AdventureBot
-Dependencies:
+Requires:
 
   - Module: LambdaSharpS3PackageLoader
     Version: 0.5-WIP
 
 Entries:
 
+  # TODO: Alexa skill parameters (hard-coded for now)
+  - Variable: AlexaVendorId
+    Value: M391VLNC7W4F15
+
+  - Variable: AlexaClientId
+    Value: amzn1.application-oa2-client.a4994f2abca8407cb0cd2fb9fe38b163
+
+  - Variable: AlexaClientSecret
+    Type: Secret
+    Value: "AQICAHjsMCg1qq6xLyoiDDKeDUPbiR+3YKllMrx6XZvFlIvJkAGr6XVSDp6ldsAybTJOgJ1QAAAAojCBnwYJKoZIhvcNAQcGoIGRMIGOAgEAMIGIBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDAGpvsDN+p820OYq8AIBEIBbsSyIIEm8asxM/zPn8e+Q0XuFCrYthk5ft0OH/o1Vnbf8uJHmPQAyh+VYr9WmF16nXxuQiMlgYLnc3GV1AMYd4TijvOV8oIhoKdL+z0ot+KMeTr6f2qsYlhDQ3w=="
+
+  # Generated using: ask util generate-lwa-tokens --scope alexa::ask:skills:readwrite
+  - Variable: AlexaRefreshToken
+    Type: Secret
+    Value: "AQICAHjsMCg1qq6xLyoiDDKeDUPbiR+3YKllMrx6XZvFlIvJkAFYAKfqX7Ww1IQXEHigkVo/AAACnzCCApsGCSqGSIb3DQEHBqCCAowwggKIAgEAMIICgQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyMxPhlIWZtSepzSC4CARCAggJS0nYZQMmSoqdpKHvEmRisC0kVHRVBx79OcoUMqgqWHJhg2jwHAMWDBirln+TyVn67sYQVzGwBADUnmjOJdEgWJkw4PYXEinLhPDo0r16b7eFdPvCq7HjAAtZysKBwFNBd14zJ4xEgGycT2Oy/SS32fZdlTRINAxnwbDFu0mp2HwVxqQ1al7P3X4HsNmO9NeHsHLnVltcWUyMb+0/b0yyWmln+SsL5YADV6MtA6pii14v0B49JMHCynRu5qjZajYBb6kpmo8bkBiQk3aLVFLQRFLjIkWtL7TGTq0Iz1OfKBI39ohqlYIVzZ6u7Bv1hh5OnrNCqNTchcgJP33t6LEg+OhZuwmtxgVt6GY1+ZwE7XE8zVx/FBz1yp4R+VEyC9NdRVgoTD/Mm1U+OITWMtcBzt7znl8ziZe3N/rwZlRLi6yD65X0jRZCK8UlpQfS8htKDLG5QnbAFfJ5edNqgYVI1PkjXC06cS/dXphTM9QutauvMzosbpXPONgss92P6SzdRqW9uiPg/Pdx4+AhXopvoMaBIrJedDoTdHlq32IAakLBdFJQbI5mkWDnRfXecORlgyGzmTWa59AfMMRxkt2uwmLVhEe2YmyjosoNROpfdpmp4C+vGEDeTfNSeq18Ns6I7wHDEyVR1U+lxjodXr36wKXCj12JxnLjkwZf5R1S+XhZTyGnP74FoxzN2u+4Xo35H8vgaxmKJ7n6hTyRmDsX2F+n6ymxZeODjmbGvYW7tf1dACTQBO6FTJ0M6dmMWyG7bNL9ShosadIurs9gk0QwWNayX"
+
   # Parameters
-
-  # NOTE: Specify your alexa skill id (e.g. amzn1.ask.skill.xxxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-  #       to prevent the Lambda function from being invoked by other skills.
-
-  - Parameter: AlexaSkillID
-    Description: Alexa Skill ID
-    Default: "*"
-
   - Parameter: AdventureFile
-    Scope: "*"
     Description: Name of the adventure file to use
+    Scope: "*"
     Default: my-demo-adventure.yml
 
-  # Upload adventure and sound files
+  # Upload adventure files
   - Package: AdventureFilesPackage
     Description: Package of all adventures files to be uploaded to S3 bucket
     Files: assets/adventures/
 
   - Resource: AdventureFiles
-    Scope: "*"
     Type: LambdaSharp::S3::Package
     Properties:
       SourceBucketName: !Ref DeploymentBucketName
@@ -36,12 +43,12 @@ Entries:
       DestinationBucketName: !Ref AdventureBucket
       DestinationKeyPrefix: Adventures/
 
+  # Upload sound files
   - Package: SoundFilesPackage
     Description: Package of all sound files to be uploaded to S3 bucket
     Files: assets/sounds/*.mp3
 
   - Resource: SoundFiles
-    Scope: "*"
     Description: Package of all sound files to be uploaded to S3 bucket
     Type: LambdaSharp::S3::Package
     Properties:
@@ -49,6 +56,58 @@ Entries:
       SourcePackageKey: !Ref SoundFilesPackage
       DestinationBucketName: !Ref AdventureBucket
       DestinationKeyPrefix: Sounds/
+
+  # Upload alexa skill manifest files
+  - Package: AlexaSkillManifest
+    Description: Package of the Alexa skill files
+    Files: assets/ask/
+
+  - Resource: AdventureBotSkill
+    Description: Alexa Skill to create
+    Type: Alexa::ASK::Skill
+    Properties:
+      VendorId: !Ref AlexaVendorId
+      AuthenticationConfiguration:
+        ClientId: !Ref AlexaClientId
+        ClientSecret: !Ref AlexaClientSecret::Plaintext
+        RefreshToken: !Ref AlexaRefreshToken::Plaintext
+      SkillPackage:
+        Overrides:
+          Manifest:
+            publishingInformation:
+              locales:
+                en-US:
+                  name: !Sub "${Module::Name}-${Module::Version}"
+            apis:
+              custom:
+                endpoint:
+                  uri: !GetAtt Alexa.Arn
+        S3Bucket: !Ref DeploymentBucketName
+        S3BucketRole: !GetAtt AlexaRole.Arn
+        S3Key: !Ref AlexaSkillManifest
+    DependsOn: Alexa::Source1AlexaPermission
+
+  - Resource: AlexaRole
+    Description: Alexa role for accessing the skill manifest on S3
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Sid: AlexaPrincipal
+          Effect: Allow
+          Principal:
+            Service: alexa-appkit.amazon.com
+          Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}AlexaS3BucketPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: AlexaS3BucketAccess
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${DeploymentBucketName}/${AlexaSkillManifest}"
 
   - Resource: AdventureFinishedTopic
     Scope: "*"
@@ -83,8 +142,6 @@ Entries:
     Description: DynamoDb table for storing player progression in their adventure
     Type: AWS::DynamoDB::Table
     Allow: ReadWrite
-    Pragmas:
-      - skip-property-validation
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
@@ -99,4 +156,6 @@ Entries:
     Memory: 128
     Timeout: 30
     Sources:
-      - Alexa: !Ref AlexaSkillID
+      - Alexa: "*"
+      # TODO: limit invocation to Alexa skill ID
+      # - Alexa: !Ref AdventureBotSkill

@@ -1,12 +1,11 @@
-Module: AdventureBot
-Version: 1.0
+Module: LambdaSharpDemo.AdventureBot
 Description: Alexa-based Choose-your-AdventureBot
 Requires:
 
-  - Module: LambdaSharpS3PackageLoader
+  - Module: LambdaSharp.S3
     Version: 0.5-WIP
 
-Entries:
+Items:
 
   # TODO: Alexa skill parameters (hard-coded for now)
   - Variable: AlexaVendorId
@@ -17,12 +16,12 @@ Entries:
 
   - Variable: AlexaClientSecret
     Type: Secret
-    Value: "AQICAHjsMCg1qq6xLyoiDDKeDUPbiR+3YKllMrx6XZvFlIvJkAGr6XVSDp6ldsAybTJOgJ1QAAAAojCBnwYJKoZIhvcNAQcGoIGRMIGOAgEAMIGIBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDAGpvsDN+p820OYq8AIBEIBbsSyIIEm8asxM/zPn8e+Q0XuFCrYthk5ft0OH/o1Vnbf8uJHmPQAyh+VYr9WmF16nXxuQiMlgYLnc3GV1AMYd4TijvOV8oIhoKdL+z0ot+KMeTr6f2qsYlhDQ3w=="
+    Value: "AQICAHiCsSkJcktH01JzeuMyuierM2v8hop/BGGSMDVU54i/qQFiWgs+hRLgPkA1SbJZDtIaAAAAojCBnwYJKoZIhvcNAQcGoIGRMIGOAgEAMIGIBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDMt7ixWCewNwMt13egIBEIBbmH9qm6mAaiFLT/+gl6QOfRhLImP1TLBOvM3xk4zafLUu+fobTDAm2UnRXjahZZnRYl3yTO9HoB2qH9bR1VVa5RcrifGHnV3GO924OJB9FRGk8qjhIAaZzbEETQ=="
 
   # Generated using: ask util generate-lwa-tokens --scope alexa::ask:skills:readwrite
   - Variable: AlexaRefreshToken
     Type: Secret
-    Value: "AQICAHjsMCg1qq6xLyoiDDKeDUPbiR+3YKllMrx6XZvFlIvJkAFYAKfqX7Ww1IQXEHigkVo/AAACnzCCApsGCSqGSIb3DQEHBqCCAowwggKIAgEAMIICgQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyMxPhlIWZtSepzSC4CARCAggJS0nYZQMmSoqdpKHvEmRisC0kVHRVBx79OcoUMqgqWHJhg2jwHAMWDBirln+TyVn67sYQVzGwBADUnmjOJdEgWJkw4PYXEinLhPDo0r16b7eFdPvCq7HjAAtZysKBwFNBd14zJ4xEgGycT2Oy/SS32fZdlTRINAxnwbDFu0mp2HwVxqQ1al7P3X4HsNmO9NeHsHLnVltcWUyMb+0/b0yyWmln+SsL5YADV6MtA6pii14v0B49JMHCynRu5qjZajYBb6kpmo8bkBiQk3aLVFLQRFLjIkWtL7TGTq0Iz1OfKBI39ohqlYIVzZ6u7Bv1hh5OnrNCqNTchcgJP33t6LEg+OhZuwmtxgVt6GY1+ZwE7XE8zVx/FBz1yp4R+VEyC9NdRVgoTD/Mm1U+OITWMtcBzt7znl8ziZe3N/rwZlRLi6yD65X0jRZCK8UlpQfS8htKDLG5QnbAFfJ5edNqgYVI1PkjXC06cS/dXphTM9QutauvMzosbpXPONgss92P6SzdRqW9uiPg/Pdx4+AhXopvoMaBIrJedDoTdHlq32IAakLBdFJQbI5mkWDnRfXecORlgyGzmTWa59AfMMRxkt2uwmLVhEe2YmyjosoNROpfdpmp4C+vGEDeTfNSeq18Ns6I7wHDEyVR1U+lxjodXr36wKXCj12JxnLjkwZf5R1S+XhZTyGnP74FoxzN2u+4Xo35H8vgaxmKJ7n6hTyRmDsX2F+n6ymxZeODjmbGvYW7tf1dACTQBO6FTJ0M6dmMWyG7bNL9ShosadIurs9gk0QwWNayX"
+    Value: "AQICAHiCsSkJcktH01JzeuMyuierM2v8hop/BGGSMDVU54i/qQEgP5lmWIfFzdngADsRPAzAAAACnzCCApsGCSqGSIb3DQEHBqCCAowwggKIAgEAMIICgQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAzm0mXOcYEHcHj4jWQCARCAggJSGE+43b9Y7Ox7IjU5l7t6uzxqQRP97CPA21Zb89UzZmT3qu4PY+Q5aETL45k7y57M0a/icGQtxx3+fkm5g9RyfQZjl9pJ6JdfQkr6xZzmPkJnci0AiztA5dJrUy88nrVRfp+Yu6T32WjSu/S7S7lItwf0gH2QJGpcE5PUjW3xs2LzevafT719LN/LUxdMlp0jgVlr0vfEWPZyn+ffk7xywnEfd6FmqbXD8F3mxBc+3bJ3fkkbxZW4jrsAQZVdAPoqEQfPX8qWOxoiMrSbDQXGMnUqMY+6BwEIqrCdMg59be+RJ/5osjCcmwCJcTgMHOQAqryRwA1SYqa6Grg/tY4msTtMa0OImZ/69jeQaNsd6ui+e93TA0MqOyBd8tUPWK+bfo4iwtlqAphURFQKC+oqq8rvR5wvX4N+Y5OnX1BoxAo6VAo/md4rvDcmsUOTY5kcr3Nl47orN6TM02ttkhac3+6/ci4DWDW8adIBMFIqXJCqUsxsTCgx3eGu1zZ9KCGvevVeBFjWlTej84oHrBPn0iDcgbMNfwlHNJexxkagcSP+FgQy6O9jGItI21PnBnKPX0VBOeLP74i2nY2V6FPO0+iSNqoLasVmLx5mNm7dor0P90chRJlm+a2Ul0weUHdakOsDlNHFPJQ2kjd9+29rDAUGDg2mPI792q8OTe+26AZ/cuaBsxePAQqjaT6e99yj5UM+hSNl6nfU8d5Io/AYBiKFJlLRPHVdgCF036lCAkWnhtPWbyblrpd1KJehAOFYlaTCFC2T7zF7/mMYgPwfQ2C+"
 
   # Parameters
   - Parameter: AdventureFile
@@ -36,12 +35,12 @@ Entries:
     Files: assets/adventures/
 
   - Resource: AdventureFiles
-    Type: LambdaSharp::S3::Package
+    Type: LambdaSharp::S3::Unzip
     Properties:
-      SourceBucketName: !Ref DeploymentBucketName
-      SourcePackageKey: !Ref AdventureFilesPackage
-      DestinationBucketName: !Ref AdventureBucket
-      DestinationKeyPrefix: Adventures/
+      SourceBucket: !Ref DeploymentBucketName
+      SourceKey: !Ref AdventureFilesPackage
+      DestinationBucket: !Ref AdventureBucket
+      DestinationKey: Adventures/
 
   # Upload sound files
   - Package: SoundFilesPackage
@@ -50,12 +49,12 @@ Entries:
 
   - Resource: SoundFiles
     Description: Package of all sound files to be uploaded to S3 bucket
-    Type: LambdaSharp::S3::Package
+    Type: LambdaSharp::S3::Unzip
     Properties:
-      SourceBucketName: !Ref DeploymentBucketName
-      SourcePackageKey: !Ref SoundFilesPackage
-      DestinationBucketName: !Ref AdventureBucket
-      DestinationKeyPrefix: Sounds/
+      SourceBucket: !Ref DeploymentBucketName
+      SourceKey: !Ref SoundFilesPackage
+      DestinationBucket: !Ref AdventureBucket
+      DestinationKey: Sounds/
 
   # Upload alexa skill manifest files
   - Package: AlexaSkillManifest
@@ -77,7 +76,7 @@ Entries:
             publishingInformation:
               locales:
                 en-US:
-                  name: !Sub "${Module::Name}-${Module::Version}"
+                  name: !Sub "${Module::FullName}-${Module::Version}"
             apis:
               custom:
                 endpoint:

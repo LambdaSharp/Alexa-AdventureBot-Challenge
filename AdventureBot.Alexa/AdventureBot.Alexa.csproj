@@ -11,15 +11,16 @@
   <ItemGroup>
     <PackageReference Include="Alexa.NET" Version="1.5.4"/>
     <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0"/>
-    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.2.0"/>
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.4.0"/>
     <PackageReference Include="AWSSDK.S3" Version="3.3.20"/>
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.10.4"/>
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.1.4"/>
-    <PackageReference Include="MindTouch.LambdaSharp" Version="0.2.0"/>
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.1.10"/>
+    <!--PackageReference Include="LambdaSharp" Version="0.2"/-->
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2"/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AdventureBot\AdventureBot.csproj"/>
+    <ProjectReference Include="..\..\LambdaSharpTool\src\LambdaSharp\LambdaSharp.csproj"/>
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="Amazon.Lambda.Tools" Version="2.2.0"/>

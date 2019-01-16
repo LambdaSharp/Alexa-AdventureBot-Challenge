@@ -36,7 +36,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Lambda.Core;
 using Amazon.S3;
 using Amazon.SimpleNotificationService;
-using MindTouch.LambdaSharp;
+using LambdaSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

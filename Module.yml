@@ -2,30 +2,45 @@ Module: LambdaSharpDemo.AdventureBot
 Description: Alexa-based Choose-your-AdventureBot
 Requires:
 
-  - Module: LambdaSharp.S3
+  - Module: LambdaSharp.S3.IO
     Version: 0.5-WIP
 
 Items:
 
-  # TODO: Alexa skill parameters (hard-coded for now)
-  - Variable: AlexaVendorId
-    Value: M391VLNC7W4F15
+  # Alexa Settings
+  - Parameter: AlexaVendorId
+    Description: Alexa Vendor ID
+    Section: Alexa Settings
+    Label: Amazon vendor ID for developer account hosting the skill
 
-  - Variable: AlexaClientId
-    Value: amzn1.application-oa2-client.a4994f2abca8407cb0cd2fb9fe38b163
+  - Parameter: AlexaClientId
+    Description: Alexa Client ID
+    Section: Alexa Settings
+    Label: Amazon Client ID from Login-with-Amazon (LWA)
 
-  - Variable: AlexaClientSecret
+  - Parameter: AlexaClientSecret
     Type: Secret
-    Value: "AQICAHiCsSkJcktH01JzeuMyuierM2v8hop/BGGSMDVU54i/qQFiWgs+hRLgPkA1SbJZDtIaAAAAojCBnwYJKoZIhvcNAQcGoIGRMIGOAgEAMIGIBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDMt7ixWCewNwMt13egIBEIBbmH9qm6mAaiFLT/+gl6QOfRhLImP1TLBOvM3xk4zafLUu+fobTDAm2UnRXjahZZnRYl3yTO9HoB2qH9bR1VVa5RcrifGHnV3GO924OJB9FRGk8qjhIAaZzbEETQ=="
+    Description: Alexa Client Secret
+    Section: Alexa Settings
+    Label: Amazon Client Secret from Login-with-Amazon (LWA)
 
   # Generated using: ask util generate-lwa-tokens --scope alexa::ask:skills:readwrite
-  - Variable: AlexaRefreshToken
-    Type: Secret
-    Value: "AQICAHiCsSkJcktH01JzeuMyuierM2v8hop/BGGSMDVU54i/qQEgP5lmWIfFzdngADsRPAzAAAACnzCCApsGCSqGSIb3DQEHBqCCAowwggKIAgEAMIICgQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAzm0mXOcYEHcHj4jWQCARCAggJSGE+43b9Y7Ox7IjU5l7t6uzxqQRP97CPA21Zb89UzZmT3qu4PY+Q5aETL45k7y57M0a/icGQtxx3+fkm5g9RyfQZjl9pJ6JdfQkr6xZzmPkJnci0AiztA5dJrUy88nrVRfp+Yu6T32WjSu/S7S7lItwf0gH2QJGpcE5PUjW3xs2LzevafT719LN/LUxdMlp0jgVlr0vfEWPZyn+ffk7xywnEfd6FmqbXD8F3mxBc+3bJ3fkkbxZW4jrsAQZVdAPoqEQfPX8qWOxoiMrSbDQXGMnUqMY+6BwEIqrCdMg59be+RJ/5osjCcmwCJcTgMHOQAqryRwA1SYqa6Grg/tY4msTtMa0OImZ/69jeQaNsd6ui+e93TA0MqOyBd8tUPWK+bfo4iwtlqAphURFQKC+oqq8rvR5wvX4N+Y5OnX1BoxAo6VAo/md4rvDcmsUOTY5kcr3Nl47orN6TM02ttkhac3+6/ci4DWDW8adIBMFIqXJCqUsxsTCgx3eGu1zZ9KCGvevVeBFjWlTej84oHrBPn0iDcgbMNfwlHNJexxkagcSP+FgQy6O9jGItI21PnBnKPX0VBOeLP74i2nY2V6FPO0+iSNqoLasVmLx5mNm7dor0P90chRJlm+a2Ul0weUHdakOsDlNHFPJQ2kjd9+29rDAUGDg2mPI792q8OTe+26AZ/cuaBsxePAQqjaT6e99yj5UM+hSNl6nfU8d5Io/AYBiKFJlLRPHVdgCF036lCAkWnhtPWbyblrpd1KJehAOFYlaTCFC2T7zF7/mMYgPwfQ2C+"
+  - Parameter: AlexaRefreshToken
+    Description: Alexa Refresh Token
+    Section: Alexa Settings
+    Label: Amazon Refresh Token Login-with-Amazon (LWA)
+
+  - Parameter: AlexaSkillId
+    Description: Alexa Skill ID
+    Section: Alexa Settings
+    Label: Alexa Skill ID (can be set once the skill has been created)
+    Default: "*"
 
   # Parameters
   - Parameter: AdventureFile
     Description: Name of the adventure file to use
+    Section: Adventure Settings
+    Label: Name of the adventure file to use
     Scope: "*"
     Default: my-demo-adventure.yml
 
@@ -35,7 +50,9 @@ Items:
     Files: assets/adventures/
 
   - Resource: AdventureFiles
+    Description: Package of all adventure files to be uploaded to S3 bucket
     Type: LambdaSharp::S3::Unzip
+    Scope: "*"
     Properties:
       SourceBucket: !Ref DeploymentBucketName
       SourceKey: !Ref AdventureFilesPackage
@@ -50,6 +67,7 @@ Items:
   - Resource: SoundFiles
     Description: Package of all sound files to be uploaded to S3 bucket
     Type: LambdaSharp::S3::Unzip
+    Scope: "*"
     Properties:
       SourceBucket: !Ref DeploymentBucketName
       SourceKey: !Ref SoundFilesPackage
@@ -69,14 +87,14 @@ Items:
       AuthenticationConfiguration:
         ClientId: !Ref AlexaClientId
         ClientSecret: !Ref AlexaClientSecret::Plaintext
-        RefreshToken: !Ref AlexaRefreshToken::Plaintext
+        RefreshToken: !Ref AlexaRefreshToken
       SkillPackage:
         Overrides:
           Manifest:
             publishingInformation:
               locales:
                 en-US:
-                  name: !Sub "${Module::FullName}-${Module::Version}"
+                  name: !Ref Module::Id
             apis:
               custom:
                 endpoint:
@@ -155,6 +173,4 @@ Items:
     Memory: 128
     Timeout: 30
     Sources:
-      - Alexa: "*"
-      # TODO: limit invocation to Alexa skill ID
-      # - Alexa: !Ref AdventureBotSkill
+      - Alexa: !Ref AlexaSkillId
